@@ -72,6 +72,9 @@ Thumbs.db
 
 # Project data stores
 data/chromaDB/chromaStore/
+data/chromaDB/*.sqlite3
+data/chromaDB/*.sqlite
+data/chromaDB/*journal
 data/chromaDB/__pycache__/
 data/sqlite/*.sqlite3
 data/sqlite/*.sqlite
