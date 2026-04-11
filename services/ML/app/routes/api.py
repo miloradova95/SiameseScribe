@@ -1,18 +1,18 @@
 from fastapi import APIRouter
 
-# Shared schemas (adjust path depending on your project structure)
-from shared.schemas.ml import (
+from shared.schemas.mlBackend import (
     SegmentRequest,
     SegmentResponse,
-    EmbedRequest,
-    EmbedResponse,
-    SearchRequest,
-    SearchResponse,
-    ExplainRequest,
-    HeatmapResponse,
-    TrainRequest,
-    TrainResponse,
+    EmbedPatchesRequest,
+    EmbedPatchesResponse,
+    SearchPatchesRequest,
+    SearchPatchesResponse,
+    ExplainPairRequest,
+    ExplainPairResponse,
+    RetrainRequest,
+    RetrainResponse,
 )
+
 
 router = APIRouter()
 
@@ -22,66 +22,54 @@ router = APIRouter()
 # =========================
 @router.post("/segment", response_model=SegmentResponse)
 def segment_image(req: SegmentRequest):
-    """
-    Splits image into patches using segmentation model
-    """
-
-    # from app.services import segment
-    # return segment.run(req.image_path)
 
     return {
         "patches": [
             {
                 "patch_id": 5001,
-                "bbox": [10, 20, 100, 100],
+                "bbox": {
+                    "x": 10,
+                    "y": 20,
+                    "width": 100,
+                    "height": 100
+                },
                 "patch_path": "/data/patches/5001.png"
             },
             {
                 "patch_id": 5002,
-                "bbox": [120, 50, 100, 100],
+                "bbox": {
+                    "x": 120,
+                    "y": 50,
+                    "width": 100,
+                    "height": 100
+                },
                 "patch_path": "/data/patches/5002.png"
             }
         ]
     }
 
-    # raise NotImplementedError("Segmentation not implemented yet")
-
 
 # =========================
 # 2. EMBED PATCHES
 # =========================
-@router.post("/embed_patches", response_model=EmbedResponse)
-def embed_patches(req: EmbedRequest):
-    """
-    Generate embeddings for patches
-    """
-
-    # from app.services import embed
-    # return embed.run(req.patch_paths)
+@router.post("/embed_patches", response_model=EmbedPatchesResponse)
+def embed_patches(req: EmbedPatchesRequest):
 
     return {
         "embeddings": [
             {
-                "patch_path": req.patch_paths[0] if req.patch_paths else "",
-                "vector": [0.1] * 32
+                "patch_path": req.patch_paths[0],
+                "vector": [0.1] * 32  # MUST be 32 values
             }
         ]
     }
-
-    # raise NotImplementedError("Embedding not implemented yet")
 
 
 # =========================
 # 3. SEARCH SIMILAR PATCHES
 # =========================
-@router.post("/search_patches", response_model=SearchResponse)
-def search_patches(req: SearchRequest):
-    """
-    Find nearest neighbor patches
-    """
-
-    # from app.services import search
-    # return search.run(req.embedding, req.top_k)
+@router.post("/search_patches", response_model=SearchPatchesResponse)
+def search_patches(req: SearchPatchesRequest):
 
     return {
         "results": [
@@ -90,20 +78,12 @@ def search_patches(req: SearchRequest):
         ]
     }
 
-    # raise NotImplementedError("Search not implemented yet")
-
 
 # =========================
 # 4. PAIRWISE HEATMAP
 # =========================
-@router.post("/explain_pair", response_model=HeatmapResponse)
-def explain_pair(req: ExplainRequest):
-    """
-    Generate explanation heatmaps for a patch pair
-    """
-
-    # from app.services import explain
-    # return explain.run(req.query_patch_path, req.result_patch_path)
+@router.post("/explain_pair", response_model=ExplainPairResponse)
+def explain_pair(req: ExplainPairRequest):
 
     return {
         "heatmaps": {
@@ -112,23 +92,13 @@ def explain_pair(req: ExplainRequest):
         }
     }
 
-    # raise NotImplementedError("Explain not implemented yet")
-
 
 # =========================
 # 5. RETRAIN MODEL
 # =========================
-@router.post("/retrain", response_model=TrainResponse)
-def retrain(req: TrainRequest):
-    """
-    Retrain / fine-tune Siamese network
-    """
-
-    # from app.services import train
-    # return train.run(req.triplets)
+@router.post("/retrain", response_model=RetrainResponse)
+def retrain(req: RetrainRequest):
 
     return {
         "status": "training_started"
     }
-
-    # raise NotImplementedError("Training not implemented yet")

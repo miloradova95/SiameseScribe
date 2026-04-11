@@ -1,6 +1,53 @@
 # SiameseScribe
 An AI-Powered Morphological Retrieval Tool for Art History. Using Siamese Networks and high-dimensional vector embeddings to identify stylistic parallels in medieval pen flourishes. Features an expert-guided refinement loop where researchers evaluate similarity predictions to dynamically optimize model precision.
 
+## Setup
+
+### 1. Create virtual environment
+
+Not yet added
+
+---
+
+### 2. Install dependencies
+
+- 
+
+---
+
+### 3. Install project as package
+
+```bash
+pip install -e .
+```
+
+This enables clean imports across all services:
+example in ml backend we can call. 
+
+```python
+from shared.schemas.ml_backend import SegmentRequest
+```
+And it imports from the shared folder automatically. 
+---
+
+## Running the ML Backend
+
+```bash
+cd services/ml
+uvicorn app.main:app --reload --port 8001
+```
+
+Open:
+```
+http://localhost:8001/docs
+```
+
+---
+
+## Running the Main Backend
+
+
+
 ## SQLite User Database
 
 The project now includes a lightweight SQLite-backed user repository at `data/sqlite/userDatabase.py`.

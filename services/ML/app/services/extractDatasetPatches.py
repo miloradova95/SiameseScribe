@@ -1,21 +1,34 @@
 import os
+import sys
 from pathlib import Path
 
-from services.ml.app.services.segment import extract_patches
+BASE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = BASE_DIR.parents[3]
 
+# Make imports work (shared, services, etc.)
+sys.path.append(str(PROJECT_ROOT))
 
-# =========================
-# CONFIG
-# =========================
+from services.ML.app.services.segment import extract_patches
 
-DATA_ROOT = Path("data")
-IMAGE_ROOT = DATA_ROOT / "preprocessed" / "train"   # or test
+DATA_ROOT = PROJECT_ROOT / "data" / "dataset"
+
+IMAGE_ROOT = DATA_ROOT / "preprocessed" / "train"   # or "test"
 MASK_ROOT = DATA_ROOT / "masks"
-OUTPUT_ROOT = DATA_ROOT / "patches"
+
+OUTPUT_ROOT = PROJECT_ROOT / "data" / "patches"
 
 PATCH_SIZE = (128, 128)
 STEP_SIZE = 64
 THRESHOLD = 0.1
+
+
+# DEBUG 
+
+
+print(f"PROJECT_ROOT: {PROJECT_ROOT}")
+print(f"IMAGE_ROOT: {IMAGE_ROOT}")
+print(f"Exists IMAGE_ROOT: {IMAGE_ROOT.exists()}")
+print(f"OUTPUT_ROOT: {OUTPUT_ROOT}")
 
 
 # =========================
