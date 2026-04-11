@@ -1,8 +1,8 @@
-from data.chromaDB.chromaClient import get_chroma_client, get_or_create_collection
+from chromaClient import getChromaClient, getOrCreateCollection
 
 # --- 1. Initialize the client and collection ---
-client = get_chroma_client()
-collection = get_or_create_collection(client)
+client = getChromaClient()
+collection = getOrCreateCollection(client)
 
 print(f"Collection '{collection.name}' initialized. Documents inside: {collection.count()}")
 
