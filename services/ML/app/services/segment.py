@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import List, Tuple
 
 import numpy as np
@@ -6,9 +7,20 @@ from PIL import Image, ImageOps
 from patchify import patchify
 
 
-# =========================
-# CORE: PATCH EXTRACTION
-# =========================
+def get_codex(path) -> str:
+    return "ccl73" if "CCl-73" in str(path) else "ccl71"
+
+
+def get_mask_name(image_name: str) -> str:
+    mask_name = image_name.replace("jpg", "png")
+    if "__" in mask_name:
+        mask_name = mask_name.split("__")[0] + ".png"
+    return mask_name
+
+
+def is_image_file(path) -> bool:
+    return Path(path).suffix.lower() in (".jpg", ".jpeg", ".png")
+
 
 def compute_patches(
     image: Image.Image,
@@ -31,23 +43,29 @@ def compute_patches(
     positions = []
     for i in range(n_rows):
         for j in range(n_cols):
-            x = j * step_size
-            y = i * step_size
-            positions.append((x, y))
+            positions.append((j * step_size, i * step_size))
 
     return flat_patches, positions
 
 
-# =========================
-# HELPERS
-# =========================
+def compute_positions(image: Image.Image, patch_size: Tuple[int, int], step_size: int) -> list:
+    """Compute patch positions without allocating patch arrays."""
+    img_w, img_h = image.size
+    ph, pw = patch_size
+    positions = []
+    for y in range(0, img_h - ph + 1, step_size):
+        for x in range(0, img_w - pw + 1, step_size):
+            positions.append((x, y))
+    return positions
+
 
 def pad_if_needed(image: Image.Image, patch_size: Tuple[int, int]) -> Image.Image:
-    if image.size[0] < patch_size[0] or image.size[1] < patch_size[1]:
-        height = max(image.size[0], patch_size[0])
-        width = max(image.size[1], patch_size[1])
+    img_w, img_h = image.size  # PIL size is (width, height)
+    target_w = max(img_w, patch_size[1])
+    target_h = max(img_h, patch_size[0])
 
-        image = ImageOps.pad(image, (height, width), color=0, centering=(0.5, 0.5))
+    if img_w < patch_size[1] or img_h < patch_size[0]:
+        image = ImageOps.pad(image, (target_w, target_h), color=0, centering=(0.5, 0.5))
 
     return image
 
@@ -68,10 +86,6 @@ def compute_mask_filter(mask_patches: np.ndarray, threshold: float):
     return valid_indices, valid_scores
 
 
-# =========================
-# MAIN FUNCTION (WHAT YOU NEED)
-# =========================
-
 def extract_patches(
     image_path: str,
     patch_size: Tuple[int, int],
@@ -80,51 +94,40 @@ def extract_patches(
     mask_path: str = None,
     threshold: float = 0.1,
 ):
-    """
-    Extract patches from image, optionally using mask filtering.
-    """
-
+    """Extract patches from image, optionally using mask filtering."""
     image = Image.open(image_path).convert("RGB")
     image = pad_if_needed(image, patch_size)
 
-    # Compute image patches
-    _, positions = compute_patches(image, "RGB", patch_size, step_size)
-
-    # If mask exists → filter
     if mask_path and os.path.exists(mask_path):
         mask = Image.open(mask_path).convert("L")
         mask = pad_if_needed(mask, patch_size)
-
-        mask_patches, _ = compute_patches(mask, "L", patch_size, step_size)
-
+        # Derive positions from mask patchify — avoids a redundant patchify on the image
+        mask_patches, positions = compute_patches(mask, "L", patch_size, step_size)
         valid_indices, scores = compute_mask_filter(mask_patches, threshold)
     else:
-        # No filtering → keep all
+        # Compute positions directly without allocating patch arrays
+        positions = compute_positions(image, patch_size, step_size)
         valid_indices = list(range(len(positions)))
         scores = [None] * len(positions)
 
     os.makedirs(output_dir, exist_ok=True)
 
     patches = []
+    ph, pw = patch_size
 
     for idx, patch_idx in enumerate(valid_indices):
         x, y = positions[patch_idx]
-        ph, pw = patch_size
-
         crop = image.crop((x, y, x + pw, y + ph))
 
         patch_id = f"{os.path.basename(image_path)}__patch{idx}.png"
         patch_path = os.path.join(output_dir, patch_id)
-
         crop.save(patch_path)
 
-        patches.append(
-            {
-                "patch_id": idx,
-                "bbox": [x, y, pw, ph],
-                "patch_path": patch_path,
-                "score": scores[idx],
-            }
-        )
+        patches.append({
+            "patch_id": idx,
+            "bbox": [x, y, pw, ph],
+            "patch_path": patch_path,
+            "score": scores[idx],
+        })
 
     return patches

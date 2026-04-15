@@ -1,3 +1,4 @@
+import csv
 import os
 import sys
 from pathlib import Path
@@ -5,90 +6,86 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parents[3]
 
-# Make imports work (shared, services, etc.)
 sys.path.append(str(PROJECT_ROOT))
 
-from services.ML.app.services.segment import extract_patches
+from services.ML.app.services.segment import extract_patches, get_codex, get_mask_name, is_image_file
 
 DATA_ROOT = PROJECT_ROOT / "data" / "dataset"
-
-IMAGE_ROOT = DATA_ROOT / "preprocessed" / "train"   # or "test"
 MASK_ROOT = DATA_ROOT / "masks"
-
-OUTPUT_ROOT = PROJECT_ROOT / "data" / "patches"
+PATCHES_ROOT = PROJECT_ROOT / "data" / "patches"
 
 PATCH_SIZE = (128, 128)
 STEP_SIZE = 64
 THRESHOLD = 0.1
+MODES = ["train", "test"]
 
-
-# DEBUG 
-
-
-print(f"PROJECT_ROOT: {PROJECT_ROOT}")
-print(f"IMAGE_ROOT: {IMAGE_ROOT}")
-print(f"Exists IMAGE_ROOT: {IMAGE_ROOT.exists()}")
-print(f"OUTPUT_ROOT: {OUTPUT_ROOT}")
-
-
-# =========================
-# HELPERS
-# =========================
 
 def find_mask_path(image_path: Path) -> Path | None:
-    """
-    Reconstruct mask path based on dataset logic
-    """
-    path_str = str(image_path)
-
-    codex = "ccl73" if "CCl-73" in path_str else "ccl71"
-
+    codex = get_codex(image_path)
     group = image_path.parent.name
-    image_name = image_path.name
-
-    mask_name = image_name.replace("jpg", "png")
-    if "__" in mask_name:
-        mask_name = mask_name.split("__")[0] + ".png"
-
+    mask_name = get_mask_name(image_path.name)
     mask_path = MASK_ROOT / codex / group / mask_name
-
     return mask_path if mask_path.exists() else None
 
 
-def is_image_file(path: Path) -> bool:
-    return path.suffix.lower() in [".jpg", ".jpeg", ".png"]
-
-
-# =========================
-# MAIN SCRIPT
-# =========================
-
 def main():
-    all_images = list(IMAGE_ROOT.rglob("*"))
-    all_images = [p for p in all_images if is_image_file(p)]
+    for mode in MODES:
+        image_root = DATA_ROOT / "preprocessed" / mode
+        output_dir = PATCHES_ROOT / mode
 
-    print(f"Found {len(all_images)} images")
+        if not image_root.exists():
+            print(f"[{mode}] Image root not found: {image_root}, skipping.")
+            continue
 
-    total_patches = 0
+        all_images = [p for p in image_root.rglob("*") if is_image_file(p)]
+        print(f"\n[{mode}] Found {len(all_images)} images")
 
-    for i, image_path in enumerate(all_images):
-        print(f"[{i+1}/{len(all_images)}] Processing: {image_path.name}")
+        os.makedirs(output_dir, exist_ok=True)
 
-        mask_path = find_mask_path(image_path)
+        total_patches = 0
+        metadata_rows = []
 
-        patches = extract_patches(
-            image_path=str(image_path),
-            patch_size=PATCH_SIZE,
-            step_size=STEP_SIZE,
-            output_dir=str(OUTPUT_ROOT),
-            mask_path=str(mask_path) if mask_path else None,
-            threshold=THRESHOLD,
-        )
+        for i, image_path in enumerate(all_images):
+            print(f"  [{i+1}/{len(all_images)}] {image_path.name}")
 
-        total_patches += len(patches)
+            mask_path = find_mask_path(image_path)
+            group = image_path.parent.name
+            codex = get_codex(image_path)
 
-    print(f"\nDone.")
-    print(f"Total patches created: {total_patches}")
+            patches = extract_patches(
+                image_path=str(image_path),
+                patch_size=PATCH_SIZE,
+                step_size=STEP_SIZE,
+                output_dir=str(output_dir),
+                mask_path=str(mask_path) if mask_path else None,
+                threshold=THRESHOLD,
+            )
+
+            for patch in patches:
+                x, y = patch["bbox"][0], patch["bbox"][1]
+                metadata_rows.append({
+                    "patch_filename": os.path.basename(patch["patch_path"]),
+                    "source_image": image_path.name,
+                    "group": group,
+                    "codex": codex,
+                    "x": x,
+                    "y": y,
+                    "pen_flourishing_percent": patch["score"],
+                })
+
+            total_patches += len(patches)
+
+        csv_path = PATCHES_ROOT / f"patches_{mode}_metadata.csv"
+        fieldnames = ["patch_filename", "source_image", "group", "codex", "x", "y", "pen_flourishing_percent"]
+        with open(csv_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(metadata_rows)
+
+        print(f"[{mode}] Done — {total_patches} patches → {output_dir}")
+        print(f"[{mode}] Metadata written to {csv_path}")
+
+    print("\nAll modes complete.")
 
 
 if __name__ == "__main__":

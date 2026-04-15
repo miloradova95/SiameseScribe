@@ -7,8 +7,8 @@ from typing import Annotated, Literal
 from shared.schemas.shared import BoundingBox
 
 
-# 32-dim vector type — Pydantic enforces the length at runtime
-Embedding32 = Annotated[list[float], Field(min_length=32, max_length=32)]
+# 128-dim embedding vector — matches SiameseNetwork output (no autoencoder reduction, as discussed with djordje)
+Embedding128 = Annotated[list[float], Field(min_length=128, max_length=128)]
 
 
 # ─────────────────────────────────────────────
@@ -39,7 +39,7 @@ class EmbedPatchesRequest(BaseModel):
 
 class PatchEmbedding(BaseModel):
     patch_path: str
-    vector: Embedding32
+    vector: Embedding128
 
 
 class EmbedPatchesResponse(BaseModel):
@@ -51,7 +51,7 @@ class EmbedPatchesResponse(BaseModel):
 # ─────────────────────────────────────────────
 
 class SearchPatchesRequest(BaseModel):
-    embedding: Embedding32
+    embedding: Embedding128
     top_k: int = Field(4, ge=1, le=20)
 
 
@@ -80,6 +80,15 @@ class ExplainPairHeatmaps(BaseModel):
 
 class ExplainPairResponse(BaseModel):
     heatmaps: ExplainPairHeatmaps
+
+
+# ─────────────────────────────────────────────
+# POST /embed_all_patches
+# ─────────────────────────────────────────────
+
+class EmbedAllPatchesResponse(BaseModel):
+    status: Literal["started"]
+    message: str
 
 
 # ─────────────────────────────────────────────

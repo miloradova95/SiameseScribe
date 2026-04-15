@@ -1,116 +1,144 @@
+import argparse
+import sys
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = BASE_DIR.parents[3]
+sys.path.append(str(PROJECT_ROOT))
+
 import torch
-import pandas as pd
 from PIL import Image
+from torchvision import transforms
 from tqdm import tqdm
-import uuid
-import os
 
-from model.SiameseNetwork import SiameseNetwork
-from preprocessing.transforms import get_eval_transforms
-from backend.db.chroma_client import get_chroma_client, get_or_create_collection
+from services.ML.app.services.SiameseNetwork import SiameseNetwork
+from data.chromaDB.chroma_client import get_chroma_client, get_or_create_collection
 
-# Embedds for now all images into the database, test, train and validations are not embedded sperately for this Poc
-# Paths / Settings 
-MODEL_PATH = "./model/finetunedModel.pth"
-IMAGE_ROOT = "./dataset/processed/images"
+PATCHES_DIR  = PROJECT_ROOT / "data" / "patches" / "train"
+METADATA_CSV = PROJECT_ROOT / "data" / "patches" / "patches_train_metadata.csv"
+CHROMA_PATH  = str(PROJECT_ROOT / "data" / "chromaDB" / "data" / "chroma_store")
+MODEL_PATH   = PROJECT_ROOT / "data" / "models" / "trainedModel.pth"
 
-CHROMA_PATH = "./data/chroma_store"
-COLLECTION_NAME = "paintings"
+BATCH_SIZE    = 512
+EMBEDDING_DIM = 128
 
-BATCH_SIZE = 64
-
-
-# Device
-def get_device():
-    print("CUDA available:", torch.cuda.is_available())
-    return "cuda" if torch.cuda.is_available() else "cpu"
+_transforms = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
 
 
-# Load Model
-def load_model(device):
-    model = SiameseNetwork().to(device)
-    model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
+def load_model(model_path: Path, device: str) -> SiameseNetwork:
+    model = SiameseNetwork(embedding_dim=EMBEDDING_DIM).to(device)
+    model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
-    print("Model loaded")
+    print(f"Model loaded from {model_path}")
     return model
 
 
-# Load Data
-def load_data():
-    splits = ["train.csv", "val.csv", "test.csv"]
-
-    dfs = []
-    for split in splits:
-        path = os.path.join("./dataset/processed/splits", split)
-        print(f"Loading {split}...")
-        dfs.append(pd.read_csv(path))
-
-    df = pd.concat(dfs, ignore_index=True)
-    df = df.drop_duplicates(subset=["image_path"])
-
-    print(f"Total unique images: {len(df)}")
-
-    transform = get_eval_transforms()
-    return df, transform
-
-
-# Generate Embeddings
-def generate_embeddings(model, df, transform, device):
+def embed_patches(model, patch_paths: list[Path], device: str) -> list[list[float]]:
     embeddings = []
-    metadatas = []
-    ids = []
-
-    for i in tqdm(range(len(df)), desc="Embedding"):
-        row = df.iloc[i]
-
-        img_path = os.path.join(IMAGE_ROOT, row["image_path"])
-        image = Image.open(img_path).convert("RGB")
-        image = transform(image).unsqueeze(0).to(device)
-
+    for patch_path in tqdm(patch_paths, desc="Embedding patches"):
+        image = Image.open(patch_path).convert("RGB")
+        tensor = _transforms(image).unsqueeze(0).to(device)
         with torch.no_grad():
-            emb = model.get_embedding(image).cpu().numpy().flatten()
-
-        embeddings.append(emb.tolist())
-        metadatas.append({
-            "image_path": row["image_path"],
-            "artist": str(row["label"])
-        })
-        ids.append(str(uuid.uuid4()))
-
-    return embeddings, metadatas, ids
+            emb = model.get_embedding(tensor).cpu().squeeze(0).tolist()
+        embeddings.append(emb)
+    return embeddings
 
 
-#  Store in ChromaDB 
-def store_embeddings(embeddings, metadatas, ids):
-    client = get_chroma_client(CHROMA_PATH)
-    collection = get_or_create_collection(client, COLLECTION_NAME)
+def store_embeddings(
+    collection,
+    patch_paths: list[Path],
+    embeddings: list[list[float]],
+    metadatas: list[dict],
+):
+    """
+    Upsert embeddings into ChromaDB in batches.
 
-    batch_size = 1000 
+    Uses patch filename as the deterministic ChromaDB ID, so re-running this
+    script with the same collection name is safe — existing entries are updated
+    in place rather than duplicated.
+    """
+    ids = [p.name for p in patch_paths]
 
-    for i in range(0, len(ids), batch_size):
-        print(f"Storing batch {i} to {i + batch_size}")
-
-        collection.add(
-            ids=ids[i:i+batch_size],
-            embeddings=embeddings[i:i+batch_size],
-            metadatas=metadatas[i:i+batch_size]
+    for i in range(0, len(ids), BATCH_SIZE):
+        collection.upsert(
+            ids=ids[i:i + BATCH_SIZE],
+            embeddings=embeddings[i:i + BATCH_SIZE],
+            metadatas=metadatas[i:i + BATCH_SIZE],
         )
+        print(f"  Stored {min(i + BATCH_SIZE, len(ids))}/{len(ids)}")
 
-    print(f"Stored {len(ids)} embeddings in '{COLLECTION_NAME}'")
+    print(f"Done — {len(ids)} embeddings in collection '{collection.name}'")
 
 
-#  Main
 def main():
-    device = get_device()
+    parser = argparse.ArgumentParser(description="Embed all patches into ChromaDB")
+    parser.add_argument(
+        "--collection",
+        type=str,
+        required=True,
+        help="ChromaDB collection name (e.g. 'patches_v1'). Use distinct names to avoid overwriting.",
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=str(MODEL_PATH),
+        help=f"Path to model checkpoint (default: {MODEL_PATH})",
+    )
+    parser.add_argument(
+        "--patches_dir",
+        type=str,
+        default=str(PATCHES_DIR),
+        help=f"Directory of extracted patch PNGs (default: {PATCHES_DIR})",
+    )
+    parser.add_argument(
+        "--mlflow_run_id",
+        type=str,
+        default=None,
+        help="MLflow run ID that produced the model checkpoint (stored in the ChromaDB collection metadata for traceability).",
+    )
+    args = parser.parse_args()
 
-    model = load_model(device)
-    df, transform = load_data()
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"Device: {device}")
 
-    embeddings, metadatas, ids = generate_embeddings(
-        model, df, transform, device
+    model = load_model(Path(args.model), device)
+
+    import pandas as pd
+    df = pd.read_csv(METADATA_CSV)
+    patches_dir = Path(args.patches_dir)
+    patch_paths = [patches_dir / row["patch_filename"] for _, row in df.iterrows()]
+    metadatas = [
+        {
+            "source_image": row["source_image"],
+            "group": row["group"],
+            "codex": row["codex"],
+            "x": int(row["x"]),
+            "y": int(row["y"]),
+        }
+        for _, row in df.iterrows()
+    ]
+
+    print(f"Patches to embed: {len(patch_paths)}")
+    print(f"Target collection: '{args.collection}'")
+
+    embeddings = embed_patches(model, patch_paths, device)
+
+    client = get_chroma_client(CHROMA_PATH)
+
+    # Store mlflow_run_id in the collection metadata so every collection is
+    # traceable back to the exact training run (weights, hyperparams, loss curves)
+    # that produced it. Retrieve run details with: mlflow ui --backend-store-uri file://data/mlruns
+    collection_metadata = {"mlflow_run_id": args.mlflow_run_id or "unknown"}
+    collection = client.get_or_create_collection(
+        name=args.collection,
+        metadata={"hnsw:space": "cosine", **collection_metadata},
     )
 
-    store_embeddings(embeddings, metadatas, ids)
+    store_embeddings(collection, patch_paths, embeddings, metadatas)
+    print(f"Linked to MLflow run: {args.mlflow_run_id or 'not provided'}")
 
 
 if __name__ == "__main__":
