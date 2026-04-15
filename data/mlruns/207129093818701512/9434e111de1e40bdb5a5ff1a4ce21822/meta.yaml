@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/Jhube/source/repos/SiameseScribe/data/mlruns/207129093818701512/9434e111de1e40bdb5a5ff1a4ce21822/artifacts
+end_time: 1776278482277
+entry_point_name: ''
+experiment_id: '207129093818701512'
+lifecycle_stage: active
+run_id: 9434e111de1e40bdb5a5ff1a4ce21822
+run_name: adaptable-auk-992
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1776278085123
+status: 3
+tags: []
+user_id: Jhube

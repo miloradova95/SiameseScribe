@@ -1,0 +1,8 @@
+artifact_location: file:///C:/Users/Jhube/source/repos/SiameseScribe/data/mlruns/207129093818701512
+creation_time: 1776278084972
+experiment_id: '207129093818701512'
+last_update_time: 1776278084972
+lifecycle_stage: active
+name: siamese-scribe
+trace_location: null
+workspace: default
