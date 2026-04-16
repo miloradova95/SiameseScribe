@@ -9,6 +9,5 @@ class Patch(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     image_id: int = Field(..., foreign_key="images.id", index=True)
-    patch_path: str = Field(..., description="Absolute path: /data/patches/{id}.png")
+    file_path: str = Field(..., description="Absolute path: /data/patches/{id}.png")
     bbox: dict = Field(sa_column=Column(JSON), description='{"x","y","width","height"}')
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
