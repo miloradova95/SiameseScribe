@@ -4,7 +4,6 @@ from typing import List, Tuple
 
 import numpy as np
 from PIL import Image, ImageOps
-from patchify import patchify
 
 
 def get_codex(path) -> str:
@@ -29,16 +28,22 @@ def compute_patches(
     step_size: int,
 ):
     image_array = np.array(image)
+    ph, pw = patch_size
 
     if color_mode == "RGB":
-        patch_dims = (patch_size[0], patch_size[1], 3)
+        if image_array.ndim != 3:
+            raise ValueError("Expected an RGB image array with 3 dimensions.")
+        patches_grid = np.lib.stride_tricks.sliding_window_view(
+            image_array, (ph, pw), axis=(0, 1)
+        )[::step_size, ::step_size]
+        flat_patches = patches_grid.reshape(-1, ph, pw, image_array.shape[2])
     else:
-        patch_dims = (patch_size[0], patch_size[1])
+        patches_grid = np.lib.stride_tricks.sliding_window_view(
+            image_array, (ph, pw)
+        )[::step_size, ::step_size]
+        flat_patches = patches_grid.reshape(-1, ph, pw)
 
-    patches_grid = patchify(image_array, patch_dims, step=step_size)
     n_rows, n_cols = patches_grid.shape[0], patches_grid.shape[1]
-
-    flat_patches = patches_grid.reshape(-1, *patch_dims)
 
     positions = []
     for i in range(n_rows):

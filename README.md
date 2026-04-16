@@ -29,14 +29,17 @@ example in ml backend we can call.
 ```python
 from shared.schemas.ml_backend import SegmentRequest
 ```
-And it imports from the shared folder automatically. 
+And it imports from the shared folder automatically.
+
+If you have multiple Python installs on Windows, prefer `python -m uvicorn ...` over plain
+`uvicorn ...` so the server starts with the same interpreter where you installed dependencies.
 ---
 
 ## Running the ML Backend
 
 ```bash
 cd services/ml
-uvicorn app.main:app --reload --port 8001
+python -m uvicorn app.main:app --reload --port 8001
 ```
 
 Open:
