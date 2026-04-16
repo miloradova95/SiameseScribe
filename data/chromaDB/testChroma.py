@@ -1,4 +1,4 @@
-from chromaClient import getChromaClient, getOrCreateCollection
+from data.chromaDB.chromaClient import getChromaClient, getOrCreateCollection
 
 # --- 1. Initialize the client and collection ---
 client = getChromaClient()

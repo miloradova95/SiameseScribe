@@ -1,33 +1,11 @@
 import uvicorn
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, EmailStr
-from sqlmodel import SQLModel, Field, Session, create_engine, select
+from sqlmodel import SQLModel, Session, create_engine, select
 import bcrypt
-from typing import Optional
-from datetime import datetime, timezone
+
 
 # ── Database ──────────────────────────────────
 engine = create_engine("sqlite:///./users.db", connect_args={"check_same_thread": False})
-
-# ── User table ────────────────────────────────
-class User(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    username: str = Field(unique=True, index=True)
-    email: str = Field(unique=True, index=True)
-    hashed_password: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-# ── Schemas ───────────────────────────────────
-class UserCreate(BaseModel):
-    username: str
-    email: EmailStr
-    password: str
-
-class UserResponse(BaseModel):
-    id: int
-    username: str
-    email: str
-    created_at: datetime
 
 # ── App ───────────────────────────────────────
 app = FastAPI(title="SiameseScribe API")
@@ -68,6 +46,35 @@ def get_user(user_id: int):
         if not user:
             raise HTTPException(404, "User not found")
         return user
+
+
+@app.post("/data-patches", response_model=DataPatchResponse, status_code=201)
+def create_data_patch(body: DataPatchCreate):
+    with Session(engine) as session:
+        data_patch = DataPatch(
+            file_path=body.file_path,
+            source_image=body.source_image,
+            group=body.group,
+        )
+        session.add(data_patch)
+        session.commit()
+        session.refresh(data_patch)
+        return data_patch
+
+
+@app.get("/data-patches", response_model=list[DataPatchResponse])
+def get_all_data_patches():
+    with Session(engine) as session:
+        return session.exec(select(DataPatch)).all()
+
+
+@app.get("/data-patches/{data_patch_id}", response_model=DataPatchResponse)
+def get_data_patch(data_patch_id: int):
+    with Session(engine) as session:
+        data_patch = session.get(DataPatch, data_patch_id)
+        if not data_patch:
+            raise HTTPException(404, "Data patch not found")
+        return data_patch
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)
