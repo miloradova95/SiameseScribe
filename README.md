@@ -3,16 +3,30 @@ An AI-Powered Morphological Retrieval Tool for Art History. Using Siamese Networ
 
 ## Setup
 
-### 1. Create virtual environment
+## Setup Instructions
 
-Not yet added
+### 1. Create a new Conda environment (Python 3.11)
+
+```bash
+conda create -n siamesescribe python=3.11
+conda activate siamesescribe
+```
 
 ---
 
-### 2. Install dependencies
+### 2. Navigate to the project directory
 
-- 
+```bash
+cd path/to/your/project
+```
 
+---
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
 ---
 
 ### 3. Install project as package
@@ -29,17 +43,14 @@ example in ml backend we can call.
 ```python
 from shared.schemas.ml_backend import SegmentRequest
 ```
-And it imports from the shared folder automatically.
-
-If you have multiple Python installs on Windows, prefer `python -m uvicorn ...` over plain
-`uvicorn ...` so the server starts with the same interpreter where you installed dependencies.
+And it imports from the shared folder automatically. 
 ---
 
 ## Running the ML Backend
 
 ```bash
 cd services/ml
-python -m uvicorn app.main:app --reload --port 8001
+uvicorn app.main:app --reload --port 8001
 ```
 
 Open:
