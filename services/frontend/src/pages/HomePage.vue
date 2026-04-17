@@ -6,7 +6,7 @@
       <div v-if="loading" class="state">Loading...</div>
       <div v-else-if="error" class="state error">{{ error }}</div>
       <template v-else-if="image">
-        <p class="filepath">{{ image.filePath }}</p>
+        <p class="filepath">{{ test }}</p>
         <ImageCard :image="image" />
       </template>
     </section>
@@ -21,12 +21,15 @@ const image = ref(null)
 const loading = ref(false)
 const error = ref(null)
 
+const counter = 789
+
 onMounted(async () => {
   loading.value = true
   try {
-    const res = await fetch('http://localhost:8000/images/1')
+    const res = await fetch(`http://localhost:8000/images/${counter}`)
     if (!res.ok) throw new Error(`Image not found (${res.status})`)
     image.value = await res.json()
+    const test = image.filePath
   } catch (e) {
     error.value = e.message
   } finally {
