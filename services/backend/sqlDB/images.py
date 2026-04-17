@@ -3,7 +3,8 @@
 # Only the main backend uses this — the ML backend never touches the DB.
 
 from sqlmodel import SQLModel, Field, Column
-from typing import Optional
+from sqlalchemy import JSON
+from typing import Optional, List
 
 
 class Image(SQLModel, table=True):
@@ -13,3 +14,4 @@ class Image(SQLModel, table=True):
     fileName: str = Field(..., description="Original file name of the uploaded image")
     filePath: str = Field(..., description="Absolute path: /data/dataset/preprocessed/")
     group: Optional[str] = Field(default=None, description="Optional group identifier for categorization")
+    patches: Optional[List[int]] = Field(default=None, sa_column=Column(JSON))
