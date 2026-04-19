@@ -1,8 +1,10 @@
 import chromadb
+from pathlib import Path
 
-#define function with default argument "./data/chroma_store" where data is stored
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+_DEFAULT_CHROMA_PATH = str(_PROJECT_ROOT / "data" / "chromaDB" / "chroma_store")
 
-def get_chroma_client(persist_path: str = "./data/chromaDB/data/chroma_store") -> chromadb.ClientAPI: #type hint?
+def get_chroma_client(persist_path: str = _DEFAULT_CHROMA_PATH) -> chromadb.ClientAPI: #type hint?
 
     client = chromadb.PersistentClient(path=persist_path) #local db stored in path
     return client # returns client object
