@@ -8,7 +8,10 @@ PROJECT_ROOT = BASE_DIR.parents[3]
 
 sys.path.append(str(PROJECT_ROOT))
 
+from sqlmodel import Session
 from services.ML.app.services.segment import extract_patches, get_codex, get_mask_name, is_image_file
+from services.backend.database import engine
+from services.backend.serivces.image_service import get_id_by_filename
 
 DATA_ROOT = PROJECT_ROOT / "data" / "dataset"
 MASK_ROOT = DATA_ROOT / "masks"
@@ -29,6 +32,11 @@ def find_mask_path(image_path: Path) -> Path | None:
 
 
 def main():
+    with Session(engine) as session:
+        _run(session)
+
+
+def _run(session: Session):
     for mode in MODES:
         image_root = DATA_ROOT / "preprocessed" / mode
         output_dir = PATCHES_ROOT / mode
@@ -61,11 +69,14 @@ def main():
                 threshold=THRESHOLD,
             )
 
+            source_image_id = get_id_by_filename(session, image_path.name)
+
             for patch in patches:
                 x, y = patch["bbox"][0], patch["bbox"][1]
                 metadata_rows.append({
                     "patch_filename": os.path.basename(patch["patch_path"]),
                     "source_image": image_path.name,
+                    "source_image_id": source_image_id,
                     "group": group,
                     "codex": codex,
                     "x": x,
@@ -76,7 +87,7 @@ def main():
             total_patches += len(patches)
 
         csv_path = PATCHES_ROOT / f"patches_{mode}_metadata.csv"
-        fieldnames = ["patch_filename", "source_image", "group", "codex", "x", "y", "pen_flourishing_percent"]
+        fieldnames = ["patch_filename", "source_image", "source_image_id", "group", "codex", "x", "y", "pen_flourishing_percent"]
         with open(csv_path, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
