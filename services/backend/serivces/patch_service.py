@@ -11,4 +11,4 @@ def get_by_id(session: Session, patch_id: int) -> Patch | None:
 
 
 def get_by_image_id(session: Session, image_id: int) -> list[Patch]:
-    return session.exec(select(Patch).where(Patch.image_id == image_id)).all()
+    return session.exec(select(Patch).where(Patch.source_image_id == image_id)).all()
