@@ -36,6 +36,14 @@ def upload_image(
     return image_service.create(session, file_name=file.filename, file_path=file_path, group=group)
 
 
+@router.get("/random", response_model=Image)
+def get_random_image(session: Session = Depends(get_session)):
+    image = image_service.get_random(session)
+    if not image:
+        raise HTTPException(404, "No images found")
+    return image
+
+
 @router.get("/{image_id}", response_model=Image)
 def get_image_by_id(image_id: int, session: Session = Depends(get_session)):
     image = image_service.get_by_id(session, image_id)
