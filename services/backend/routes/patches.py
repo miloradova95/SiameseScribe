@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse
 from sqlmodel import Session
 import os
 from services.backend.sqlDB.patches import Patch
-from services.backend.serivces import patch_service
+from services.backend.services import patch_service
 from .deps import get_session
 
 router = APIRouter(prefix="/patches", tags=["patches"])

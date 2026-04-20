@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from sqlmodel import Session
-from services.backend.serivces import image_service
+from services.backend.services import image_service
 from services.backend.sqlDB.images import Image
 from services.backend.sqlDB.patches import Patch
-from services.backend.serivces import patch_service
+from services.backend.services import patch_service
 from .deps import get_session
 from typing import Optional
 import os
