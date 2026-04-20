@@ -38,3 +38,10 @@ def get_patch_file(patch_id: int, session: Session = Depends(get_session)):
     if not absolute_path.is_file():
         raise HTTPException(404, "File not found on disk")
     return FileResponse(str(absolute_path))
+
+@router.get("/by-file-name/{file_name}", response_model=Patch)
+def get_patch_by_file_name(file_name: str, session: Session = Depends(get_session)):
+    patch = patch_service.get_by_file_name(session, file_name)
+    if not patch:
+        raise HTTPException(404, "Patch not found")
+    return patch

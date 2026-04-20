@@ -10,7 +10,7 @@ def get_chroma_client(persist_path: str = _DEFAULT_CHROMA_PATH) -> chromadb.Clie
     return client # returns client object
 
 
-def get_or_create_collection(client: chromadb.ClientAPI, name: str = "paintings"): #collection: is like a table of a db
+def get_or_create_collection(client: chromadb.ClientAPI, name: str = "default_collection"): #collection: is like a table of a db
     
     collection = client.get_or_create_collection(
         name=name,
