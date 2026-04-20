@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
+from pathlib import Path
 from sqlmodel import Session
-import os
 from services.backend.sqlDB.patches import Patch
 from services.backend.services import patch_service
 from .deps import get_session
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 router = APIRouter(prefix="/patches", tags=["patches"])
 
@@ -32,6 +34,7 @@ def get_patch_file(patch_id: int, session: Session = Depends(get_session)):
     patch = patch_service.get_by_id(session, patch_id)
     if not patch:
         raise HTTPException(404, "Patch not found")
-    if not os.path.isfile(patch.file_path):
+    absolute_path = PROJECT_ROOT.parent / patch.file_path.replace("\\", "/")
+    if not absolute_path.is_file():
         raise HTTPException(404, "File not found on disk")
-    return FileResponse(patch.file_path)
+    return FileResponse(str(absolute_path))
