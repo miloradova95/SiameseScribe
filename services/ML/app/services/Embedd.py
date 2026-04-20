@@ -12,7 +12,7 @@ from torchvision import transforms
 from tqdm import tqdm
 
 from services.ML.app.services.SiameseNetwork import SiameseNetwork
-from data.chromaDB.chroma_client import get_chroma_client, get_or_create_collection
+from services.ML.app.services.chroma_client import get_chroma_client, get_or_create_collection
 
 PATCHES_DIR  = PROJECT_ROOT / "data" / "patches" / "train"
 METADATA_CSV = PROJECT_ROOT / "data" / "patches" / "patches_train_metadata.csv"
