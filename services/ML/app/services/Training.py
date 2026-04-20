@@ -16,6 +16,7 @@ from tqdm import tqdm
 from services.ML.app.services.SiameseNetwork import SiameseNetwork
 from services.ML.app.services.TripletLoss import TripletLoss
 from services.ML.app.services.PatchTripletDataset import PatchTripletDataset
+from services.ML.app.services.mlflow_utils import fix_mlflow_paths
 
 # =========================
 # CONFIG
@@ -104,7 +105,8 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
     os.makedirs(MODEL_SAVE_PATH.parent, exist_ok=True)
-    mlflow.set_tracking_uri("file:///" + MLFLOW_DIR.as_posix())
+    fix_mlflow_paths(MLFLOW_DIR, "siamese-scribe")
+    mlflow.set_tracking_uri(MLFLOW_DIR.as_uri())
     mlflow.set_experiment("siamese-scribe")
 
     with mlflow.start_run() as run:

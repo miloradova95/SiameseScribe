@@ -12,7 +12,7 @@ from torchvision import transforms
 from tqdm import tqdm
 
 from services.ML.app.services.SiameseNetwork import SiameseNetwork
-from data.chromaDB.chroma_client import get_chroma_client, get_or_create_collection
+from services.ML.app.chroma_client import get_chroma_client, get_or_create_collection
 
 PATCHES_DIR  = PROJECT_ROOT / "data" / "patches" / "train"
 METADATA_CSV = PROJECT_ROOT / "data" / "patches" / "patches_train_metadata.csv"
@@ -112,11 +112,13 @@ def main():
     patch_paths = [patches_dir / row["patch_filename"] for _, row in df.iterrows()]
     metadatas = [
         {
-            "source_image": row["source_image"],
-            "group": row["group"],
-            "codex": row["codex"],
-            "x": int(row["x"]),
-            "y": int(row["y"]),
+            "source_image":            row["source_image"],
+            "source_image_id":         int(row["source_image_id"]),
+            "group":                   row["group"],
+            "codex":                   row["codex"],
+            "x":                       int(row["x"]),
+            "y":                       int(row["y"]),
+            "pen_flourishing_percent": float(row["pen_flourishing_percent"]),
         }
         for _, row in df.iterrows()
     ]
