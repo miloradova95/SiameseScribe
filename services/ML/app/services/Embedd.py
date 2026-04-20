@@ -113,6 +113,7 @@ def main():
     metadatas = [
         {
             "source_image": row["source_image"],
+            "source_image_id": row["source_image_id"],
             "group": row["group"],
             "codex": row["codex"],
             "x": int(row["x"]),
