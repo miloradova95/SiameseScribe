@@ -95,3 +95,8 @@ dataset/
 
 # Service-local generated data folders
 services/**/data/
+
+# MLflow
+data/mlruns/
+mlruns/
+mlartifacts/
