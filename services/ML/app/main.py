@@ -1,3 +1,4 @@
+import os
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -10,26 +11,49 @@ import torch
 from fastapi import FastAPI
 
 from app.routes import api
+from services.ML.app.chroma_client import get_chroma_client
 from services.ML.app.services.SiameseNetwork import SiameseNetwork
+from services.ML.app.services.segmentation.segmentation_service import SegmentationService
 
-MODEL_PATH = PROJECT_ROOT / "data" / "models" / "trainedModel.pth"
-EMBEDDING_DIM = 128
+MODEL_PATH        = PROJECT_ROOT / "data" / "models" / "trainedModel.pth"
+CHROMA_PATH       = PROJECT_ROOT / "data" / "chromaDB" / "data" / "chroma_store"
+CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "patches_v1")
+EMBEDDING_DIM     = 128
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = SiameseNetwork(embedding_dim=EMBEDDING_DIM).to(device)
 
+    # Load Siamese embedding model
+    model = SiameseNetwork(embedding_dim=EMBEDDING_DIM).to(device)
     if MODEL_PATH.exists():
         model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
-        print(f"Model loaded from {MODEL_PATH}")
+        print(f"Siamese model loaded from {MODEL_PATH}")
     else:
-        print(f"Warning: no model checkpoint found at {MODEL_PATH}, using random weights")
-
+        print(f"Warning: no checkpoint found at {MODEL_PATH}, using random weights")
     model.eval()
     app.state.model = model
     app.state.device = device
+
+    # Load segmentation model
+    try:
+        seg_service = SegmentationService()
+        app.state.seg_service = seg_service
+    except Exception as e:
+        print(f"Warning: segmentation model failed to load: {e}")
+        app.state.seg_service = None
+
+    # Load ChromaDB collection
+    try:
+        client = get_chroma_client(str(CHROMA_PATH))
+        collection = client.get_collection(CHROMA_COLLECTION)
+        print(f"ChromaDB collection '{CHROMA_COLLECTION}' loaded ({collection.count()} embeddings)")
+        app.state.collection = collection
+    except Exception as e:
+        print(f"Warning: ChromaDB collection '{CHROMA_COLLECTION}' not available: {e}")
+        app.state.collection = None
+
     yield
 
 

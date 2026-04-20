@@ -5,11 +5,14 @@ BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parents[3]
 sys.path.append(str(PROJECT_ROOT))
 
+import numpy as np
 import torch
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from PIL import Image
 from torchvision import transforms
 
+from services.ML.app.services.Finetune import count_constructable_triplets, finetune
+from services.ML.app.services.segment import extract_patches
 from shared.schemas.mlBackend import (
     EmbedAllPatchesResponse,
     EmbedPatchesRequest,
@@ -22,7 +25,9 @@ from shared.schemas.mlBackend import (
     SearchPatchesResponse,
     SegmentRequest,
     SegmentResponse,
+    SegmentedPatch,
 )
+from shared.schemas.shared import BoundingBox
 
 router = APIRouter()
 
@@ -37,13 +42,47 @@ _embed_transforms = transforms.Compose([
 # ─────────────────────────────────────────────
 
 @router.post("/segment", response_model=SegmentResponse)
-def segment_image(req: SegmentRequest):
-    return {
-        "patches": [
-            {"patch_id": 5001, "bbox": {"x": 10, "y": 20, "width": 100, "height": 100}, "patch_path": "/data/patches/5001.png"},
-            {"patch_id": 5002, "bbox": {"x": 120, "y": 50, "width": 100, "height": 100}, "patch_path": "/data/patches/5002.png"},
-        ]
-    }
+def segment_image(req: SegmentRequest, request: Request):
+    seg_service = request.app.state.seg_service
+    if seg_service is None:
+        raise HTTPException(status_code=503, detail="Segmentation model not loaded")
+
+    image_path = Path(req.image_path)
+    if not image_path.is_absolute():
+        image_path = PROJECT_ROOT / image_path
+
+    image_bytes = image_path.read_bytes()
+    mask_array, _ = seg_service.predict_mask(image_bytes)
+
+    # blob_removal returns H×W×3 (all channels identical) — reduce to single channel
+    if mask_array.ndim == 3:
+        mask_array = mask_array[:, :, 0]
+    mask_pil = Image.fromarray(mask_array, mode="L")
+
+    # Save mask PNG alongside dataset masks for reproducibility
+    mask_dir = PROJECT_ROOT / "data" / "dataset" / "masks" / "uploads"
+    mask_dir.mkdir(parents=True, exist_ok=True)
+    mask_pil.save(mask_dir / f"{image_path.stem}.png")
+
+    output_dir = PROJECT_ROOT / "data" / "patches" / "uploads"
+    patches_data = extract_patches(
+        image_path=str(image_path),
+        patch_size=(128, 128),
+        step_size=64,
+        output_dir=str(output_dir),
+        mask_image=mask_pil,
+        threshold=0.1,
+    )
+
+    patches = [
+        SegmentedPatch(
+            patch_index=p["patch_id"],
+            bbox=BoundingBox(x=p["bbox"][0], y=p["bbox"][1], width=p["bbox"][2], height=p["bbox"][3]),
+            patch_path=str(Path(p["patch_path"]).relative_to(PROJECT_ROOT)).replace("\\", "/"),
+        )
+        for p in patches_data
+    ]
+    return {"patches": patches}
 
 
 # ─────────────────────────────────────────────
@@ -104,11 +143,25 @@ def embed_all_patches():
 # ─────────────────────────────────────────────
 
 @router.post("/search_patches", response_model=SearchPatchesResponse)
-def search_patches(req: SearchPatchesRequest):
+def search_patches(req: SearchPatchesRequest, request: Request):
+    collection = request.app.state.collection
+    if collection is None:
+        raise HTTPException(status_code=503, detail="ChromaDB collection not loaded — run Embedd.py first")
+
+    results = collection.query(
+        query_embeddings=[req.embedding],
+        n_results=req.top_k,
+        include=["distances"],
+    )
+
+    ids = results["ids"][0]
+    distances = results["distances"][0]
+
+    # ChromaDB cosine space: distance = 1 − cosine_similarity
     return {
         "results": [
-            {"patch_id": 6001, "similarity_score": 0.87},
-            {"patch_id": 2134, "similarity_score": 0.82},
+            {"patch_filename": pid, "similarity_score": round(1.0 - dist, 6)}
+            for pid, dist in zip(ids, distances)
         ]
     }
 
@@ -132,5 +185,11 @@ def explain_pair(req: ExplainPairRequest):
 # ─────────────────────────────────────────────
 
 @router.post("/retrain", response_model=RetrainResponse)
-def retrain(req: RetrainRequest):
-    return {"status": "training_started"}
+def retrain(req: RetrainRequest, background_tasks: BackgroundTasks):
+    feedback_dicts = [f.model_dump() for f in req.feedback]
+    triplets_used = count_constructable_triplets(feedback_dicts, req.k_triplets)
+
+    if triplets_used > 0:
+        background_tasks.add_task(finetune, feedback_dicts, req.k_triplets)
+
+    return {"status": "training_started", "triplets_used": triplets_used}
