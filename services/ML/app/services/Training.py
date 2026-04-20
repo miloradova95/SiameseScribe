@@ -95,7 +95,7 @@ def main():
         dataset,
         batch_size=BATCH_SIZE,
         shuffle=True,
-        num_workers=4,
+        num_workers=0,
         pin_memory=True,
     )
 
@@ -104,7 +104,7 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
     os.makedirs(MODEL_SAVE_PATH.parent, exist_ok=True)
-    mlflow.set_tracking_uri(MLFLOW_DIR.as_uri())
+    mlflow.set_tracking_uri("file:///" + MLFLOW_DIR.as_posix())
     mlflow.set_experiment("siamese-scribe")
 
     with mlflow.start_run() as run:
