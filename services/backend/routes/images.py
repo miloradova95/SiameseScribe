@@ -1,17 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from sqlmodel import Session
-from services.backend.serivces import image_service
+from services.backend.services import image_service
 from services.backend.sqlDB.images import Image
 from services.backend.sqlDB.patches import Patch
-from services.backend.serivces import patch_service
+from services.backend.services import patch_service
 from .deps import get_session
 from typing import Optional
 import os
 import shutil
 import uuid
+from pathlib import Path
 
-UPLOAD_DIR = "data/dataset/preprocessed/TEMP"
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
+UPLOAD_DIR = PROJECT_ROOT / "data" / "dataset" / "preprocessed" / "TEMP"
 
 router = APIRouter(prefix="/images", tags=["images"])
 
@@ -57,9 +60,10 @@ def get_image_file(image_id: int, session: Session = Depends(get_session)):
     image = image_service.get_by_id(session, image_id)
     if not image:
         raise HTTPException(404, "Image not found")
-    if not os.path.isfile(image.filePath):
-        raise HTTPException(404, "File not found on disk")
-    return FileResponse(image.filePath)
+    full_path = PROJECT_ROOT.parent / image.filePath.replace("\\", "/")
+    if not full_path.is_file():
+        raise HTTPException(404, f"File not found on disk: {full_path}")
+    return FileResponse(str(full_path))
 
 
 @router.get("/{image_id}/patches", response_model=list[Patch])

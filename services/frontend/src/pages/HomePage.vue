@@ -20,8 +20,9 @@ import ImageCard from '../components/ImageCard.vue'
 const image = ref(null)
 const loading = ref(false)
 const error = ref(null)
+const test = ref("")
 
-const counter = 789
+const counter = 1
 
 onMounted(async () => {
   loading.value = true
@@ -29,7 +30,7 @@ onMounted(async () => {
     const res = await fetch(`http://localhost:8000/images/${counter}`)
     if (!res.ok) throw new Error(`Image not found (${res.status})`)
     image.value = await res.json()
-    const test = image.filePath
+    test.value = image.value.filePath
   } catch (e) {
     error.value = e.message
   } finally {

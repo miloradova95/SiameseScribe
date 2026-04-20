@@ -41,7 +41,6 @@ def _seed_images():
         already_seeded = session.exec(select(Image)).first()
         if already_seeded:
             return
-
         images = []
         for split in ("train", "test"):
             split_dir = PREPROCESSED_DIR / split
@@ -53,21 +52,21 @@ def _seed_images():
                 group = group_dir.name
                 for img_path in sorted(group_dir.iterdir()):
                     if img_path.suffix.lower() in IMAGE_EXTENSIONS:
+                        relative_path = img_path.resolve().relative_to(PROJECT_ROOT.parent)
                         images.append(Image(
                             fileName=img_path.name,
-                            filePath=str(img_path.resolve()),
+                            filePath=str(relative_path),
                             group=group,
                         ))
-
         session.add_all(images)
         session.commit()
+
 
 def _seed_patches():
     with Session(engine) as session:
         already_seeded = session.exec(select(Patch)).first()
         if already_seeded:
             return
-
         patches = []
         for mode in ("train", "test"):
             csv_path = PATCHES_DIR / f"patches_{mode}_metadata.csv"
@@ -78,15 +77,16 @@ def _seed_patches():
                     source_image_id = row["source_image_id"]
                     if not source_image_id:
                         continue
+                    full_path = (PATCHES_DIR / mode / row["patch_filename"]).resolve()
+                    relative_path = full_path.relative_to(PROJECT_ROOT.parent)
                     patches.append(Patch(
                         source_image_id=int(source_image_id),
-                        file_path=str((PATCHES_DIR / mode / row["patch_filename"]).resolve()),
+                        file_path=str(relative_path),
                         bbox={"x": int(row["x"]), "y": int(row["y"]), "width": 128, "height": 128},
                         group=row["group"] or None,
                         codex=row["codex"] or None,
                         pen_flourishing_percent=float(row["pen_flourishing_percent"]) if row["pen_flourishing_percent"] not in ("", "None") else None,
                     ))
-
         session.add_all(patches)
         session.commit()
 

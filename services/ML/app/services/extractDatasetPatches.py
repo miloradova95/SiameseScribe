@@ -11,7 +11,7 @@ sys.path.append(str(PROJECT_ROOT))
 from sqlmodel import Session
 from services.ML.app.services.segment import extract_patches, get_codex, get_mask_name, is_image_file
 from services.backend.database import engine
-from services.backend.serivces.image_service import get_id_by_filename
+from services.backend.services.image_service import get_id_by_filename
 
 DATA_ROOT = PROJECT_ROOT / "data" / "dataset"
 MASK_ROOT = DATA_ROOT / "masks"
