@@ -95,3 +95,7 @@ dataset/
 
 # Service-local generated data folders
 services/**/data/
+
+# ML training artifacts
+data/mlruns/
+data/models/*.pth
