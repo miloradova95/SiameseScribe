@@ -27,7 +27,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import ImageCard from '../components/ImageCard.vue'
+import ImageCard from '../features/browse/ImageCard.vue'
 import PatchCard from '../components/PatchCard.vue'
 import { apiUrl } from '../lib/api'
 
