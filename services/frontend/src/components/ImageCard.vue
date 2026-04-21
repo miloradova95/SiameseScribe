@@ -1,59 +1,45 @@
 <template>
-  <div class="image-card">
-    <img :src="fileUrl" :alt="image.fileName" class="preview" />
-    <div class="info">
-      <p class="name">{{ image.fileName }}</p>
-      <p v-if="image.group" class="group">Group: {{ image.group }}</p>
+  <button
+    type="button"
+    class="group w-full overflow-hidden rounded-3xl border bg-white/50 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+    :class="selected ? 'border-[#6c4d3d] ring-1 ring-[#6c4d3d]' : 'border-brand-line'"
+    @click="$emit('click')"
+  >
+    <div class="aspect-[4/5] overflow-hidden bg-brand-surface">
+      <img
+        :src="fileUrl"
+        :alt="image.fileName"
+        class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+      />
     </div>
-  </div>
+
+    <div class="px-3 py-3">
+      <p class="truncate text-sm font-medium text-brand-text">
+        {{ image.fileName }}
+      </p>
+      <p class="mt-1 text-xs text-brand-subtle">
+        Group: {{ image.group || '—' }}
+      </p>
+    </div>
+  </button>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { apiUrl } from '../lib/api'
 
 const props = defineProps({
   image: {
     type: Object,
     required: true,
   },
+  selected: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-const fileUrl = computed(() => `http://localhost:8000/images/${props.image.id}/file`)
+defineEmits(['click'])
+
+const fileUrl = computed(() => apiUrl(`/images/${props.image.id}/file`))
 </script>
-
-<style scoped>
-.image-card {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  overflow: hidden;
-  width: 220px;
-  background: #fafafa;
-}
-
-.preview {
-  width: 100%;
-  height: 160px;
-  object-fit: cover;
-  display: block;
-}
-
-.info {
-  padding: 8px 12px;
-}
-
-.name {
-  margin: 0;
-  font-weight: 600;
-  font-size: 0.85rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.group {
-  margin: 4px 0 0;
-  font-size: 0.75rem;
-  color: #666;
-}
-
-</style>
