@@ -100,3 +100,5 @@ services/**/data/
 data/mlruns/
 mlruns/
 mlartifacts/
+
+data/chromaDB/data/chroma_store/
