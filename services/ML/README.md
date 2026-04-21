@@ -26,10 +26,10 @@ Interactive docs: http://localhost:8001/docs
 | `Embedd.py` | Done | Batch embed all patches into ChromaDB |
 | `/embed_patches` endpoint | **Real** | Loads model, runs inference, returns 128-dim vectors |
 | `/embed_all_patches` endpoint | Dummy | Stub — run `Embedd.py` directly instead |
-| `/segment` endpoint | Dummy | Needs segmentation model for new images (not yet available) |
-| `/search_patches` endpoint | Dummy | To be implemented after embedding is populated |
+| `/segment` endpoint | **Real** | U-Net++ segmentation → mask → 128×128 patches saved to `data/patches/uploads/` |
+| `/search_patches` endpoint | **Real** | Queries ChromaDB with 128-dim vector, returns ranked filenames + cosine similarity scores |
 | `/explain_pair` endpoint | Dummy | SFAM heatmap generation — to be implemented |
-| `/retrain` endpoint | Dummy | Fine-tuning on feedback — to be implemented |
+| `/retrain` endpoint | **Real** | Accepts feedback pairs, constructs triplets internally, fine-tunes in background |
 
 ---
 
@@ -196,9 +196,120 @@ Expected response:
 
 ---
 
-### Test remaining stubs (`/segment`, `/search_patches`, `/explain_pair`, `/retrain`)
+### Test `/segment` (real)
 
-All return hardcoded mock responses. Use http://localhost:8001/docs to try them.
+Requires the segmentation model weights at `services/ML/app/services/segmentation/models/UNet-V3_28-11-2025_13-37.pth`.
+
+```bash
+curl -X POST http://localhost:8001/segment \
+  -H "Content-Type: application/json" \
+  -d '{"image_path": "shared/schemas/TestImagesforUpload/CCl-71_017r0.jpg"}'
+```
+
+Expected response — one entry per extracted patch:
+```json
+{
+  "patches": [
+    {
+      "patch_id": 0,
+      "bbox": {"x": 64, "y": 128, "width": 128, "height": 128},
+      "patch_path": "data/patches/uploads/CCl-71_017r0.jpg__patch0.png"
+    },
+    ...
+  ]
+}
+```
+
+Outputs written to disk:
+- Mask PNG: `data/dataset/masks/uploads/CCl-71_017r0.png`
+- Patches: `data/patches/uploads/CCl-71_017r0.jpg__patch{n}.png`
+
+---
+
+### Test `/search_patches` (real)
+
+Requires ChromaDB to be populated first — run `Embedd.py` (Step 3 above).
+
+Two-step process: embed a query patch, then search with the resulting vector.
+
+**Step 1 — get an embedding:**
+```bash
+curl -X POST http://localhost:8001/embed_patches \
+  -H "Content-Type: application/json" \
+  -d '{"patch_paths": ["data/patches/train/CCl-71_020r0.jpg__patch0.png"]}'
+```
+
+Copy the `vector` array from the response (128 floats).
+
+**Step 2 — search with it:**
+```bash
+curl -X POST http://localhost:8001/search_patches \
+  -H "Content-Type: application/json" \
+  -d '{
+    "embedding": [0.031, -0.012, ...],
+    "top_k": 5
+  }'
+```
+
+Expected response:
+```json
+{
+  "results": [
+    { "patch_filename": "CCl-71_020r0.jpg__patch0.png", "similarity_score": 1.0 },
+    { "patch_filename": "CCl-71_020r0.jpg__patch2.png", "similarity_score": 0.941 },
+    { "patch_filename": "CCl-71_022r0.jpg__patch7.png", "similarity_score": 0.887 }
+  ]
+}
+```
+
+The top result should be the query patch itself (score ≈ 1.0). Results with the same group label (B/D/E/G) as the query should rank highest after a well-trained model.
+
+---
+
+### Test `/retrain` (real)
+
+The endpoint returns immediately — training runs in the background. You need at least one query patch with **both** a positive and a negative feedback item to form a triplet.
+
+```bash
+curl -X POST http://localhost:8001/retrain \
+  -H "Content-Type: application/json" \
+  -d '{
+    "feedback": [
+      {
+        "query_patch_path":  "data/patches/train/CCl-71_020r0.jpg__patch0.png",
+        "result_patch_path": "data/patches/train/CCl-71_020r0.jpg__patch3.png",
+        "is_similar": true
+      },
+      {
+        "query_patch_path":  "data/patches/train/CCl-71_020r0.jpg__patch0.png",
+        "result_patch_path": "data/patches/train/CCl-71_020r0.jpg__patch1.png",
+        "is_similar": false
+      }
+    ],
+    "k_triplets": 1
+  }'
+```
+
+Expected response (immediate):
+```json
+{
+  "status": "training_started",
+  "triplets_used": 1
+}
+```
+
+`triplets_used: 0` means no complete triplets could be formed — check that each query patch
+has at least one `is_similar: true` **and** one `is_similar: false` result.
+
+After training completes (background), check:
+- `data/models/` — new `trainedModel_ft_{run_id}.pth` file
+- MLflow UI (`mlflow ui --backend-store-uri data/mlruns`) — new `finetune_*` run with `finetune_loss` metric
+
+---
+
+### Test remaining stubs (`/explain_pair`)
+
+Returns a hardcoded mock response. Use http://localhost:8001/docs to try it.
 
 ---
 
@@ -219,6 +330,10 @@ services/ML/
 │   │   ├── TripletLoss.py             Triplet loss
 │   │   ├── Training.py                Training script with MLflow
 │   │   ├── Embedd.py                  Batch embedding script
+│   │   ├── segmentation/              Segmentation service (U-Net++ model + utilities)
+│   │   │   ├── segmentation_service.py    SegmentationService class — predict_mask()
+│   │   │   ├── segmentation_utils/        Config, model definitions, prediction pipeline
+│   │   │   └── models/                    Model weights (.pth files)
 │   │   ├── Old_Files/                 POC reference implementations
 │   │   └── Sample_Repo_Files/         Supervisor's reference code
 │   └── Endpoints+Services.md          API specification
@@ -229,9 +344,7 @@ services/ML/
 
 ## What Is Still Open
 
-- **`/segment` for new images** — requires a segmentation model that generates masks for
-  arbitrary uploaded images. The existing `segment.py` logic works but needs masks as input.
-  Currently returns hardcoded mock patches.
+- **`/segment`** — implemented. Runs U-Net++ segmentation, saves mask to `data/dataset/masks/uploads/`, extracts 128×128 patches to `data/patches/uploads/`. Patch paths in the response are relative to the project root.
 - **`/search_patches`** — needs ChromaDB populated (run `Embedd.py` first).
 - **`/explain_pair`** — SFAM heatmap generation using `SiameseNetwork.forward_with_sfam()`,
   needs implementing.

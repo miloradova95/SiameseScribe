@@ -20,7 +20,7 @@ class SegmentRequest(BaseModel):
 
 
 class SegmentedPatch(BaseModel):
-    patch_id: int
+    patch_index: int
     bbox: BoundingBox
     patch_path: str
 
@@ -56,7 +56,7 @@ class SearchPatchesRequest(BaseModel):
 
 
 class SearchResultItem(BaseModel):
-    patch_id: int
+    patch_filename: str
     similarity_score: float = Field(..., ge=0.0, le=1.0)
 
 
@@ -95,15 +95,17 @@ class EmbedAllPatchesResponse(BaseModel):
 # POST /retrain
 # ─────────────────────────────────────────────
 
-class Triplet(BaseModel):
-    anchor_patch_path: str
-    positive_patch_path: str
-    negative_patch_path: str
+class FeedbackItem(BaseModel):
+    query_patch_path: str
+    result_patch_path: str
+    is_similar: bool
 
 
 class RetrainRequest(BaseModel):
-    triplets: list[Triplet] = Field(..., min_length=1)
+    feedback: list[FeedbackItem] = Field(..., min_length=1)
+    k_triplets: int = Field(1, ge=1, le=5)
 
 
 class RetrainResponse(BaseModel):
     status: Literal["training_started"]
+    triplets_used: int

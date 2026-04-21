@@ -10,17 +10,35 @@
         <ImageCard :image="image" />
       </template>
     </section>
+    <section class="patch-section">
+      <h2>Search Patch by File Name</h2>
+      <div class="search-form">
+        <input v-model="fileName" type="text" placeholder="Enter file name" />
+        <button @click="searchPatch" :disabled="patchLoading">Search</button>
+      </div>
+      <div v-if="patchLoading" class="state">Searching...</div>
+      <div v-else-if="patchError" class="state error">{{ patchError }}</div>
+      <template v-else-if="patch">
+        <PatchCard :patch="patch" />
+      </template>
+    </section>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import ImageCard from '../components/ImageCard.vue'
+import PatchCard from '../components/PatchCard.vue'
 
 const image = ref(null)
 const loading = ref(false)
 const error = ref(null)
 const test = ref("")
+
+const fileName = ref("")
+const patch = ref(null)
+const patchLoading = ref(false)
+const patchError = ref(null)
 
 const counter = 1
 
@@ -37,6 +55,22 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+const searchPatch = async () => {
+  if (!fileName.value.trim()) return
+  patchLoading.value = true
+  patchError.value = null
+  patch.value = null
+  try {
+    const res = await fetch(`http://localhost:8000/patches/by-file-name/${encodeURIComponent(fileName.value)}`)
+    if (!res.ok) throw new Error(`Patch not found (${res.status})`)
+    patch.value = await res.json()
+  } catch (e) {
+    patchError.value = e.message
+  } finally {
+    patchLoading.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -46,6 +80,10 @@ onMounted(async () => {
 
 .image-section {
   margin-top: 24px;
+}
+
+.patch-section {
+  margin-top: 48px;
 }
 
 h2 {
@@ -65,5 +103,32 @@ h2 {
 
 .error {
   color: #c0392b;
+}
+
+.search-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+button {
+  padding: 8px 16px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }
 </style>
