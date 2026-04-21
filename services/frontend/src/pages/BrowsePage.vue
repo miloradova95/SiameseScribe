@@ -1,24 +1,30 @@
 <template>
-  <div class="page-shell">
-    <main class="page-main !max-w-[1400px] !items-stretch !text-left">
-      <section class="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 class="page-title !max-w-none !text-left !text-4xl md:!text-5xl">
-            Overview of all Uploads
-          </h1>
-          <p class="mt-2 text-sm text-brand-subtle">
-            Browse all uploaded images and inspect patches for the selected item.
-          </p>
-        </div>
+<div class="page-shell flex flex-col items-center">
+  <main class="page-main !max-w-[1400px] !items-center text-center">
+        <section class="mb-12 w-full px-6 md:px-12">
+  <div class="flex w-full flex-col gap-6 md:flex-row md:items-center md:justify-between">
+    
+    <!-- LEFT -->
+    <div class="text-left">
+      <h1 class="page-title !max-w-none !text-4xl md:!text-5xl">
+        Overview of all Uploads
+      </h1>
+      <p class="mt-2 text-sm text-brand-subtle">
+        Browse all uploaded images and inspect patches for the selected item.
+      </p>
+    </div>
 
-        <button
-          @click="loadRandom"
-          :disabled="loading || images.length === 0"
-          class="btn-primary-outline !mt-0 whitespace-nowrap"
-        >
-          {{ loading ? 'Loading...' : 'Random Image + Patches' }}
-        </button>
-      </section>
+    <!-- RIGHT -->
+    <button
+      @click="loadRandom"
+      :disabled="loading || images.length === 0"
+      class="btn-primary-outline whitespace-nowrap self-start md:ml-auto"
+    >
+      {{ loading ? 'Loading...' : 'Random Image + Patches' }}
+    </button>
+
+  </div>
+</section>
 
       <div v-if="error" class="error-box !mt-0 mb-6">
         {{ error }}
