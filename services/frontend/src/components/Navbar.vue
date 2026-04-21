@@ -1,8 +1,25 @@
 <template>
-  <nav>
-    <router-link to="/home">Home</router-link> |
-    <router-link to="/upload">Upload</router-link> |
-    <router-link to="/browse">Browse</router-link> |
-    <router-link to="/profile">Profile</router-link>
+  <nav class="flex items-center justify-between px-8 py-6 bg-[#f7f1eb] text-[#2b211d]">
+    <router-link
+      to="/home"
+      class="text-sm uppercase tracking-[0.2em] font-semibold"
+    >
+      Pena Fleu
+    </router-link>
+
+    <div class="flex items-center gap-8 text-sm">
+      <router-link to="/browse" class="hover:text-[#c53114] transition">
+        Browse
+      </router-link>
+      <router-link to="/upload" class="hover:text-[#c53114] transition">
+        Upload
+      </router-link>
+      <router-link to="/profile" class="hover:text-[#c53114] transition">
+        Profile
+      </router-link>
+      <router-link to="/home" class="hover:text-[#c53114] transition">
+        Home
+      </router-link>
+    </div>
   </nav>
 </template>
