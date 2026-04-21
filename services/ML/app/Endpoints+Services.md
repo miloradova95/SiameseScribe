@@ -338,19 +338,32 @@ GET /heatmaps/5001/6001/query
 
 ## POST /retrain
 
-Triggers model retraining manually.
+Triggers model fine-tuning manually based on collected user feedback.
 
 ---
 
 ### Backend Processing Steps
 
-1. Fetch feedback from DB
-2. Transform into training format (triplets)
-3. Call ML backend:
+1. Fetch feedback from DB (table: `feedback`)
+2. For each feedback row, resolve `query_patch_id` and `result_patch_id` to file paths
+   via `patches.file_path`
+3. Call ML backend with raw labeled pairs — triplet construction is done by ML:
 
    POST /retrain
    {
-     "triplets": [...]
+     "feedback": [
+       {
+         "query_patch_path": "data/patches/uploads/abc.jpg__patch0.png",
+         "result_patch_path": "data/patches/train/CCl-71_020r0.jpg__patch3.png",
+         "is_similar": true
+       },
+       {
+         "query_patch_path": "data/patches/uploads/abc.jpg__patch0.png",
+         "result_patch_path": "data/patches/train/CCl-71_020r0.jpg__patch1.png",
+         "is_similar": false
+       }
+     ],
+     "k_triplets": 1
    }
 
 ---
@@ -358,8 +371,13 @@ Triggers model retraining manually.
 ### Response
 
 {
-  "status": "training_started"
+  "status": "training_started",
+  "triplets_used": 1
 }
+
+Note: `triplets_used: 0` means feedback was received but no complete triplets could be
+constructed (e.g. a query has only positive or only negative feedback — both are needed
+to form a triplet).
 
 <!-- ######################################################################## -->
 
@@ -540,54 +558,71 @@ Generates explanation heatmaps for a pair of patches, highlighting the reasoning
 
 ## POST /retrain
 
-Retrains or fine-tunes the Siamese network using feedback gathered in the database.
+Fine-tunes the Siamese network on user feedback. Triplet construction is handled
+internally by the ML service — the backend sends raw labeled pairs.
 
 ---
 
 ### Request
 
 {
-  "triplets": [
+  "feedback": [
     {
-      "anchor_patch_path": "/data/patches/5001.png",
-      "positive_patch_path": "/data/patches/6001.png",
-      "negative_patch_path": "/data/patches/7001.png"
+      "query_patch_path": "data/patches/uploads/abc.jpg__patch0.png",
+      "result_patch_path": "data/patches/train/CCl-71_020r0.jpg__patch3.png",
+      "is_similar": true
     },
     {
-      "anchor_patch_path": "/data/patches/5001.png",
-      "positive_patch_path": "/data/patches/6001.png",
-      "negative_patch_path": "/data/patches/7001.png"
-    },
-    {...}
-  ]
+      "query_patch_path": "data/patches/uploads/abc.jpg__patch0.png",
+      "result_patch_path": "data/patches/train/CCl-71_020r0.jpg__patch1.png",
+      "is_similar": false
+    }
+  ],
+  "k_triplets": 1
 }
+
+- `feedback`: labeled pairs from user interactions (query patch + result patch + judgment)
+- `k_triplets`: how many triplets to mine per anchor query (1–5, default 1)
 
 ---
 
 ### Processing
 
-- Convert feedback into triplets
-- Fine-tune Siamese network using Triplet Loss
-- Optionally update autoencoder
-- Save updated model weights
+1. Group feedback by `query_patch_path`
+2. For each query with at least one positive AND one negative result:
+   - Construct (anchor, positive, negative) triplets
+   - Rotate negatives for diversity when k_triplets > 1
+3. Fine-tune Siamese network with Triplet Loss (LR=1e-6, 3 epochs)
+4. Save versioned weights: `data/models/trainedModel_ft_{run_id[:8]}.pth`
+5. Update latest pointer: `data/models/trainedModel.pth`
+6. Log run to MLflow under experiment `siamese-scribe`
+
+Training runs asynchronously — the response is returned immediately.
 
 ---
 
 ### Response
 
 {
-  "status": "training_started"
+  "status": "training_started",
+  "triplets_used": 1
 }
+
+- `triplets_used`: number of triplets constructed from the feedback.
+  `0` means no complete triplets could be formed (queries need both positive
+  and negative feedback to generate a triplet).
 
 
 ---
 
 # NOTES
 
-- Images and patches are stored in file storage (/data)
-- Database stores metadata, embeddings, and feedback
-- Reduce Embeddings to 32-dim (Autoencoder)
-- Similarity metric: Euclidean distance  or cosine similarity
+- Images and patches are stored in file storage (`data/`)
+- ChromaDB stores embeddings; SQLite stores metadata and feedback
+- Embeddings are 128-dim (DenseNet121 backbone, L2-normalised) — no autoencoder reduction
+- Similarity metric: cosine similarity (`hnsw:space: cosine` in ChromaDB)
 - System is patch-based, not full-image based
+- Patch filenames follow the convention: `{source_image}__patch{index}.png`
+- Patch paths in all API requests/responses are relative to the project root
 
 ---

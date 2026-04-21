@@ -97,13 +97,19 @@ def extract_patches(
     step_size: int,
     output_dir: str,
     mask_path: str = None,
+    mask_image: Image.Image = None,
     threshold: float = 0.1,
 ):
     """Extract patches from image, optionally using mask filtering."""
     image = Image.open(image_path).convert("RGB")
     image = pad_if_needed(image, patch_size)
 
-    if mask_path and os.path.exists(mask_path):
+    if mask_image is not None:
+        mask = mask_image.convert("L")
+        mask = pad_if_needed(mask, patch_size)
+        mask_patches, positions = compute_patches(mask, "L", patch_size, step_size)
+        valid_indices, scores = compute_mask_filter(mask_patches, threshold)
+    elif mask_path and os.path.exists(mask_path):
         mask = Image.open(mask_path).convert("L")
         mask = pad_if_needed(mask, patch_size)
         # Derive positions from mask patchify — avoids a redundant patchify on the image
