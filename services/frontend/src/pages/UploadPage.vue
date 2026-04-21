@@ -112,6 +112,7 @@
 <script setup>
 import { ref } from 'vue'
 import ImageCard from '../components/ImageCard.vue'
+import { apiUrl } from '../lib/api'
 
 const selectedFile = ref(null)
 const localPreview = ref(null)
@@ -140,7 +141,7 @@ async function handleUpload() {
   if (group.value.trim()) form.append('group', group.value.trim())
 
   try {
-    const res = await fetch('http://localhost:8000/images/upload', {
+    const res = await fetch(apiUrl('/images/upload'), {
       method: 'POST',
       body: form,
     })

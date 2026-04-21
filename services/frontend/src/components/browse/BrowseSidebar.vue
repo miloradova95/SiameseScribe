@@ -3,7 +3,7 @@
     <template v-if="image">
       <div class="overflow-hidden rounded-3xl bg-brand-surface">
         <img
-          :src="`http://localhost:8000/images/${image.id}/file`"
+          :src="apiUrl(`/images/${image.id}/file`)"
           :alt="image.fileName"
           class="max-h-[460px] w-full object-cover"
         />
@@ -59,7 +59,7 @@
             class="overflow-hidden rounded-2xl border border-brand-line bg-brand-surface"
           >
             <img
-              :src="`http://localhost:8000/patches/${patch.id}/file`"
+              :src="apiUrl(`/patches/${patch.id}/file`)"
               :alt="`Patch ${patch.id}`"
               class="aspect-square w-full object-cover"
             />
@@ -86,6 +86,8 @@
 </template>
 
 <script setup>
+import { apiUrl } from '@/lib/api'
+
 defineProps({
   image: {
     type: Object,

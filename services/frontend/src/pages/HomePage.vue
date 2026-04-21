@@ -29,6 +29,7 @@
 import { ref, onMounted } from 'vue'
 import ImageCard from '../components/ImageCard.vue'
 import PatchCard from '../components/PatchCard.vue'
+import { apiUrl } from '../lib/api'
 
 const image = ref(null)
 const loading = ref(false)
@@ -44,8 +45,9 @@ const counter = 1
 
 onMounted(async () => {
   loading.value = true
+  error.value = null
   try {
-    const res = await fetch(`http://localhost:8000/images/${counter}`)
+    const res = await fetch(apiUrl(`/images/${counter}`))
     if (!res.ok) throw new Error(`Image not found (${res.status})`)
     image.value = await res.json()
     test.value = image.value.filePath
@@ -62,7 +64,7 @@ const searchPatch = async () => {
   patchError.value = null
   patch.value = null
   try {
-    const res = await fetch(`http://localhost:8000/patches/by-file-name/${encodeURIComponent(fileName.value)}`)
+    const res = await fetch(apiUrl(`/patches/by-file-name/${encodeURIComponent(fileName.value)}`))
     if (!res.ok) throw new Error(`Patch not found (${res.status})`)
     patch.value = await res.json()
   } catch (e) {
