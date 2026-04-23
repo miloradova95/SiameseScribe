@@ -1,3 +1,4 @@
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from sqlmodel import Session
@@ -22,7 +23,15 @@ def upload_image(
     group: Optional[str] = Form(default=None),
     session: Session = Depends(get_session),
 ):
-    return image_service.save_upload(session, file=file, group=group)
+    try:
+        return image_service.save_and_process_upload(session, file=file, group=group)
+    except image_service.UploadPipelineError as exc:
+        raise HTTPException(status_code=502, detail=f"Upload pipeline failed at {exc.step}: {exc.message}") from exc
+    except httpx.HTTPStatusError as exc:
+        detail = exc.response.text or str(exc)
+        raise HTTPException(status_code=502, detail=f"ML backend request failed: {detail}") from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"ML backend unavailable: {exc}") from exc
 
 
 @router.get("/random", response_model=Image)
