@@ -1,136 +1,303 @@
 <template>
   <div class="home">
-    <h1>Home</h1>
-    <section class="image-section">
-      <h2>Sample Image</h2>
-      <div v-if="loading" class="state">Loading...</div>
-      <div v-else-if="error" class="state error">{{ error }}</div>
-      <template v-else-if="image">
-        <p class="filepath">{{ test }}</p>
-        <ImageCard :image="image" />
-      </template>
-    </section>
-    <section class="patch-section">
-      <h2>Search Patch by File Name</h2>
-      <div class="search-form">
-        <input v-model="fileName" type="text" placeholder="Enter file name" />
-        <button @click="searchPatch" :disabled="patchLoading">Search</button>
+    <section class="search-section">
+      <div class="search-bar">
+        <input
+          v-model="fileName"
+          type="text"
+          placeholder="Enter patch file name…"
+          @keyup.enter="search"
+        />
+        <button @click="search" :disabled="searching || !fileName.trim()">
+          {{ searching ? 'Searching…' : 'Search' }}
+        </button>
       </div>
-      <div v-if="patchLoading" class="state">Searching...</div>
-      <div v-else-if="patchError" class="state error">{{ patchError }}</div>
-      <template v-else-if="patch">
-        <PatchCard :patch="patch" />
-      </template>
+      <p v-if="searchError" class="msg error">{{ searchError }}</p>
     </section>
+
+    <template v-if="queryPatch">
+      <section class="results-layout">
+        <div class="query-panel">
+          <p class="section-label">Query patch</p>
+          <div class="patch-card query-card">
+            <img :src="fileUrl()" :alt="patchName(queryPatch.file_path)" class="patch-img" />
+            <div class="patch-meta">
+              <span class="patch-name">{{ patchName(queryPatch.file_path) }}</span>
+              <span v-if="queryPatch.group" class="badge">{{ queryPatch.group }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="similar-panel">
+          <p class="section-label">
+            Most similar patches
+            <span v-if="embedError" class="msg error" style="font-size: 12px; margin-left: 8px">{{
+              embedError
+            }}</span>
+          </p>
+
+          <div v-if="loadingSimilar" class="msg muted">Finding similar patches…</div>
+
+          <div v-else-if="similarPatches.length" class="similar-grid">
+            <div v-for="item in similarPatches" :key="item.patch_filename" class="patch-card">
+              <div class="similarity-badge">{{ (item.similarity_score * 100).toFixed(1) }}%</div>
+              <img
+                :src="patchFileUrl(item.patch_filename)"
+                :alt="item.patch_filename"
+                class="patch-img"
+                @error="onImgError($event)"
+              />
+              <div class="patch-meta">
+                <span class="patch-name">{{ item.patch_filename }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div v-else-if="!loadingSimilar && !embedError" class="msg muted">
+            No similar patches found.
+          </div>
+        </div>
+      </section>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import ImageCard from '../components/ImageCard.vue'
-import PatchCard from '../components/PatchCard.vue'
-import { apiUrl } from '../lib/api'
+import { ref } from 'vue'
+import {
+  fetchPatchByFileName,
+  fetchSimilarPatches,
+  getPatchFileUrl,
+  getPatchFileUrlByName,
+  patchName,
+} from '../services/patch-service'
 
-const image = ref(null)
-const loading = ref(false)
-const error = ref(null)
-const test = ref("")
+const fileName = ref('')
+const searching = ref(false)
+const searchError = ref(null)
+const queryPatch = ref(null)
 
-const fileName = ref("")
-const patch = ref(null)
-const patchLoading = ref(false)
-const patchError = ref(null)
+const loadingSimilar = ref(false)
+const embedError = ref(null)
+const similarPatches = ref([])
 
-const counter = 1
+function fileUrl() {
+  if (!queryPatch.value?.id) return ''
+  return getPatchFileUrl(queryPatch.value.id)
+}
 
-onMounted(async () => {
-  loading.value = true
-  error.value = null
+function patchFileUrl(filename) {
+  return getPatchFileUrlByName(filename)
+}
+
+function onImgError(e) {
+  e.target.style.opacity = '0.2'
+}
+
+async function search() {
+  const name = fileName.value.trim()
+  if (!name) return
+
+  searching.value = true
+  searchError.value = null
+  queryPatch.value = null
+  similarPatches.value = []
+  embedError.value = null
+
   try {
-    const res = await fetch(apiUrl(`/images/${counter}`))
-    if (!res.ok) throw new Error(`Image not found (${res.status})`)
-    image.value = await res.json()
-    test.value = image.value.filePath
+    queryPatch.value = await fetchPatchByFileName(name)
   } catch (e) {
-    error.value = e.message
-  } finally {
-    loading.value = false
+    searchError.value = e.message
+    searching.value = false
+    return
   }
-})
 
-const searchPatch = async () => {
-  if (!fileName.value.trim()) return
-  patchLoading.value = true
-  patchError.value = null
-  patch.value = null
+  searching.value = false
+  await fetchSimilar(queryPatch.value.file_path)
+}
+
+async function fetchSimilar(filePath) {
+  loadingSimilar.value = true
+  embedError.value = null
+
   try {
-    const res = await fetch(apiUrl(`/patches/by-file-name/${encodeURIComponent(fileName.value)}`))
-    if (!res.ok) throw new Error(`Patch not found (${res.status})`)
-    patch.value = await res.json()
+    similarPatches.value = await fetchSimilarPatches(filePath)
   } catch (e) {
-    patchError.value = e.message
+    embedError.value = e.message
   } finally {
-    patchLoading.value = false
+    loadingSimilar.value = false
   }
 }
 </script>
 
 <style scoped>
 .home {
-  padding: 24px;
+  padding: 32px 24px;
+  max-width: 1100px;
+  margin: 0 auto;
 }
 
-.image-section {
-  margin-top: 24px;
+.search-section {
+  margin-bottom: 40px;
 }
 
-.patch-section {
-  margin-top: 48px;
-}
-
-h2 {
-  margin-bottom: 12px;
-}
-
-.filepath {
-  font-size: 0.8rem;
-  color: #666;
-  margin-bottom: 8px;
-  word-break: break-all;
-}
-
-.state {
-  color: #888;
-}
-
-.error {
-  color: #c0392b;
-}
-
-.search-form {
+.search-bar {
   display: flex;
   gap: 8px;
-  margin-bottom: 12px;
 }
 
-input {
+.search-bar input {
   flex: 1;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: 10px 14px;
+  font-size: 14px;
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-md);
+  background: var(--color-background-primary);
+  color: var(--color-text-primary);
+  outline: none;
+  transition: border-color 0.15s;
 }
 
-button {
-  padding: 8px 16px;
-  background: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
+.search-bar input:focus {
+  border-color: var(--color-border-primary);
+  box-shadow: 0 0 0 2px var(--color-border-tertiary);
+}
+
+.search-bar button {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  background: var(--color-background-primary);
+  color: var(--color-text-primary);
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-md);
   cursor: pointer;
+  transition: background 0.15s;
 }
 
-button:disabled {
-  background: #ccc;
+.search-bar button:hover:not(:disabled) {
+  background: var(--color-background-secondary);
+}
+
+.search-bar button:disabled {
+  opacity: 0.45;
   cursor: not-allowed;
+}
+
+.msg {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.muted {
+  color: var(--color-text-secondary);
+}
+.error {
+  color: var(--color-text-danger);
+}
+
+.results-layout {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+}
+
+.query-panel {
+  flex: 0 0 200px;
+}
+
+.similar-panel {
+  flex: 1;
+  min-width: 0;
+}
+
+.section-label {
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
+  margin: 0 0 12px;
+}
+
+.patch-card {
+  position: relative;
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+}
+
+.query-card {
+  width: 200px;
+}
+
+.patch-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  background: var(--color-background-secondary);
+}
+
+.patch-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 0.5px solid var(--color-border-tertiary);
+  min-width: 0;
+}
+
+.patch-name {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.badge {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: var(--border-radius-md);
+  background: var(--color-background-info);
+  color: var(--color-text-info);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.similarity-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: var(--border-radius-md);
+  pointer-events: none;
+}
+
+.similar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 680px) {
+  .results-layout {
+    flex-direction: column;
+  }
+  .query-panel {
+    flex: unset;
+    width: 100%;
+  }
+  .query-card {
+    width: 100%;
+  }
 }
 </style>

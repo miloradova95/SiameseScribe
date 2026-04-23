@@ -7,14 +7,6 @@ from services.backend.sqlDB.patches import Patch
 from services.backend.services import patch_service
 from .deps import get_session
 from typing import Optional
-import os
-import shutil
-import uuid
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-
-UPLOAD_DIR = PROJECT_ROOT / "data" / "dataset" / "preprocessed" / "TEMP"
 
 router = APIRouter(prefix="/images", tags=["images"])
 
@@ -30,13 +22,7 @@ def upload_image(
     group: Optional[str] = Form(default=None),
     session: Session = Depends(get_session),
 ):
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-    ext = os.path.splitext(file.filename)[1]
-    unique_name = f"{uuid.uuid4().hex}{ext}"
-    file_path = os.path.join(UPLOAD_DIR, unique_name)
-    with open(file_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
-    return image_service.create(session, file_name=file.filename, file_path=file_path, group=group)
+    return image_service.save_upload(session, file=file, group=group)
 
 
 @router.get("/random", response_model=Image)
@@ -60,7 +46,7 @@ def get_image_file(image_id: int, session: Session = Depends(get_session)):
     image = image_service.get_by_id(session, image_id)
     if not image:
         raise HTTPException(404, "Image not found")
-    full_path = PROJECT_ROOT.parent / image.filePath.replace("\\", "/")
+    full_path = image_service.resolve_file_path(image)
     if not full_path.is_file():
         raise HTTPException(404, f"File not found on disk: {full_path}")
     return FileResponse(str(full_path))

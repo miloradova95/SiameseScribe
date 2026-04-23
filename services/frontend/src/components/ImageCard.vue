@@ -26,7 +26,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { apiUrl } from '../lib/api'
+import { getImageFileUrl } from '../services/image-service'
 
 const props = defineProps({
   image: {
@@ -41,5 +41,5 @@ const props = defineProps({
 
 defineEmits(['click'])
 
-const fileUrl = computed(() => apiUrl(`/images/${props.image.id}/file`))
+const fileUrl = computed(() => getImageFileUrl(props.image.id))
 </script>

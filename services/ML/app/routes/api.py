@@ -37,6 +37,31 @@ _embed_transforms = transforms.Compose([
 ])
 
 
+def _resolve_path(path_str: str) -> Path:
+    """
+    Resolve a patch path to an absolute filesystem path.
+
+    Paths stored in the DB are relative to PROJECT_ROOT.parent
+    (e.g. "SiameseScribe/data/patches/test/foo.png").
+    Paths coming from the segment endpoint are relative to PROJECT_ROOT.
+    Handle both cases by trying PROJECT_ROOT.parent first, then PROJECT_ROOT.
+    """
+    p = Path(path_str)
+    if p.is_absolute():
+        return p
+
+    candidate = PROJECT_ROOT.parent / p
+    if candidate.exists():
+        return candidate
+
+    candidate2 = PROJECT_ROOT / p
+    if candidate2.exists():
+        return candidate2
+
+    # Return the most-likely path so the caller gets a clear FileNotFoundError
+    return PROJECT_ROOT.parent / p
+
+
 # ─────────────────────────────────────────────
 # 1. SEGMENT IMAGE
 # ─────────────────────────────────────────────
@@ -54,12 +79,10 @@ def segment_image(req: SegmentRequest, request: Request):
     image_bytes = image_path.read_bytes()
     mask_array, _ = seg_service.predict_mask(image_bytes)
 
-    # blob_removal returns H×W×3 (all channels identical) — reduce to single channel
     if mask_array.ndim == 3:
         mask_array = mask_array[:, :, 0]
     mask_pil = Image.fromarray(mask_array, mode="L")
 
-    # Save mask PNG alongside dataset masks for reproducibility
     mask_dir = PROJECT_ROOT / "data" / "dataset" / "masks" / "uploads"
     mask_dir.mkdir(parents=True, exist_ok=True)
     mask_pil.save(mask_dir / f"{image_path.stem}.png")
@@ -96,9 +119,7 @@ def embed_patches(req: EmbedPatchesRequest, request: Request):
 
     embeddings = []
     for patch_path in req.patch_paths:
-        resolved = Path(patch_path)
-        if not resolved.is_absolute():
-            resolved = PROJECT_ROOT / resolved
+        resolved = _resolve_path(patch_path)
         image = Image.open(resolved).convert("RGB")
         tensor = _embed_transforms(image).unsqueeze(0).to(device)
 
@@ -116,18 +137,6 @@ def embed_patches(req: EmbedPatchesRequest, request: Request):
 
 @router.post("/embed_all_patches", response_model=EmbedAllPatchesResponse)
 def embed_all_patches():
-    """
-    Triggers batch embedding of all pre-extracted patches into ChromaDB.
-
-    This endpoint is intentionally NOT routed through the main backend for the initial
-    population — calling /embed_patches per-patch would mean ~90,000 HTTP round trips.
-    Instead, run the standalone script directly:
-
-        python services/ML/app/services/Embedd.py --collection <name> [--model <path>]
-
-    This endpoint exists so the process can optionally be triggered remotely once
-    the batch script is wired up as a background task.
-    """
     return {
         "status": "started",
         "message": (
@@ -157,7 +166,6 @@ def search_patches(req: SearchPatchesRequest, request: Request):
     ids = results["ids"][0]
     distances = results["distances"][0]
 
-    # ChromaDB cosine space: distance = 1 − cosine_similarity
     return {
         "results": [
             {"patch_filename": pid, "similarity_score": round(1.0 - dist, 6)}
