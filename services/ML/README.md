@@ -22,8 +22,9 @@ Interactive docs: http://localhost:8001/docs
 | `PatchTripletDataset` | Done | Triplet/pair dataset for metric learning |
 | `SiameseNetwork` | Done | DenseNet121 backbone, 128-dim L2 embeddings |
 | `TripletLoss` | Done | Standard triplet loss, margin=0.5 |
-| `Training.py` | Done | Full training loop with MLflow tracking |
+| `Training.py` | Done | Full training loop with MLflow tracking + per-epoch quick eval |
 | `Embedd.py` | Done | Batch embed all patches into ChromaDB |
+| `Evaluate.py` | Done | P@K and mAP eval against ChromaDB; logs to MLflow |
 | `/embed_patches` endpoint | **Real** | Loads model, runs inference, returns 128-dim vectors |
 | `/embed_all_patches` endpoint | Dummy | Stub — run `Embedd.py` directly instead |
 | `/segment` endpoint | **Real** | U-Net++ segmentation → mask → 128×128 patches saved to `data/patches/uploads/` |
@@ -118,6 +119,78 @@ Optional arguments:
 
 ---
 
+## Step 4 — Evaluate the Model
+
+`Evaluate.py` measures retrieval quality using **Precision@K** and **mAP** (Mean Average Precision).
+A retrieved patch is considered correct if its `group` label matches the query patch's group.
+
+There are two evaluation modes:
+
+### Full eval (standalone, ChromaDB-backed)
+
+Runs after `Embedd.py` has populated ChromaDB with the current model's embeddings.
+Queries all 25k test patches against the collection and computes definitive metrics.
+
+```bash
+python -m services.ML.app.services.Evaluate --collection patches_v1 --top_k 5
+```
+
+To log results directly onto an existing training run (eval metrics appear on the same run row in MLflow alongside `train_loss`):
+```bash
+python -m services.ML.app.services.Evaluate --collection patches_v1 --top_k 5 --mlflow_run_id 9434e111de1e40bdb5a5ff1a4ce21822
+```
+
+Expected output:
+```
+Device: cpu
+Model loaded from data/models/trainedModel.pth
+Collection 'patches_v1' loaded (90393 embeddings)
+Embedding: 100%|████| 50/50 [00:XX<00:00]
+Evaluating: 100%|████| 25603/25603 [00:XX<00:00]
+
+=== Evaluation Results ===
+Samples:       25603
+Precision@5:   0.XXXX
+mAP:           0.XXXX
+Results saved to data/models/eval_results/<run_id>.json
+```
+
+The JSON artifact contains a full per-query breakdown (patch filename, group, P@K, AP) plus the aggregate summary.
+
+Optional arguments:
+```
+--model       Path to .pth checkpoint  (default: data/models/trainedModel.pth)
+--top_k       Number of results to evaluate against  (default: 5)
+```
+
+### Quick eval (per-epoch, automatic during training)
+
+`Training.py` automatically runs a lightweight in-memory evaluation at the end of every epoch.
+It samples ~1k gallery patches from the training set and ~1k query patches from the test set,
+embeds both with the **current epoch's weights**, and computes P@K and mAP in memory — no ChromaDB needed.
+
+This is used to:
+- Track how retrieval quality improves across epochs in MLflow
+- Save `trainedModel_best.pth` whenever a new best mAP is reached
+
+No extra steps needed — just run training normally:
+```bash
+python services/ML/app/services/Training.py
+```
+
+Each epoch line will show:
+```
+Epoch 1/5  loss: 0.3241  P@5: 0.6120  mAP: 0.5834
+Epoch 2/5  loss: 0.2987  P@5: 0.6450  mAP: 0.6102
+...
+Best epoch mAP: 0.6102  → trainedModel_best.pth
+```
+
+After training finishes, the script prints the exact commands to run next (embed → evaluate)
+with the correct `--mlflow_run_id` already filled in.
+
+---
+
 ## MLflow — Experiment Tracking
 
 All training runs are logged to `data/mlruns/`. Launch the UI from the repo root:
@@ -132,8 +205,8 @@ Go to the `Evaluation runs` tab
 
 Each run logs:
 - **Parameters:** epochs, batch_size, lr, k_triplets, embedding_dim, margin, backbone, patch_size, device
-- **Metrics:** `train_loss` per epoch
-- **Artifacts:** model weights `.pth` file
+- **Metrics:** `train_loss`, `eval/precision_at_k`, `eval/mAP` per epoch; `eval/precision_at_k` + `eval/mAP` added by `Evaluate.py` when `--mlflow_run_id` is passed
+- **Artifacts:** model weights `.pth` file, eval results JSON (when full eval runs)
 
 ---
 
@@ -328,8 +401,9 @@ services/ML/
 │   │   ├── PatchTripletDataset.py     Triplet/pair dataset for training
 │   │   ├── SiameseNetwork.py          DenseNet121 siamese network
 │   │   ├── TripletLoss.py             Triplet loss
-│   │   ├── Training.py                Training script with MLflow
+│   │   ├── Training.py                Training script with MLflow + per-epoch eval
 │   │   ├── Embedd.py                  Batch embedding script
+│   │   ├── Evaluate.py                P@K / mAP evaluation (full + quick modes)
 │   │   ├── segmentation/              Segmentation service (U-Net++ model + utilities)
 │   │   │   ├── segmentation_service.py    SegmentationService class — predict_mask()
 │   │   │   ├── segmentation_utils/        Config, model definitions, prediction pipeline
@@ -344,9 +418,8 @@ services/ML/
 
 ## What Is Still Open
 
-- **`/segment`** — implemented. Runs U-Net++ segmentation, saves mask to `data/dataset/masks/uploads/`, extracts 128×128 patches to `data/patches/uploads/`. Patch paths in the response are relative to the project root.
-- **`/search_patches`** — needs ChromaDB populated (run `Embedd.py` first).
 - **`/explain_pair`** — SFAM heatmap generation using `SiameseNetwork.forward_with_sfam()`,
   needs implementing.
 - **`/retrain`** — fine-tuning on user feedback using `TripletFeedbackDataset` (from Old_Files),
   needs adapting for patch paths.
+  

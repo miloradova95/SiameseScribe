@@ -101,4 +101,6 @@ data/mlruns/
 mlruns/
 mlartifacts/
 
+/CLaude.md
+
 data/chromaDB/data/chroma_store/
