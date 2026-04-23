@@ -20,11 +20,7 @@
         <div class="query-panel">
           <p class="section-label">Query patch</p>
           <div class="patch-card query-card">
-            <img
-              :src="fileUrl(queryPatch.file_path)"
-              :alt="patchName(queryPatch.file_path)"
-              class="patch-img"
-            />
+            <img :src="fileUrl()" :alt="patchName(queryPatch.file_path)" class="patch-img" />
             <div class="patch-meta">
               <span class="patch-name">{{ patchName(queryPatch.file_path) }}</span>
               <span v-if="queryPatch.group" class="badge">{{ queryPatch.group }}</span>
@@ -68,9 +64,13 @@
 
 <script setup>
 import { ref } from 'vue'
-import { apiUrl } from '../lib/api'
-
-const ML_API = import.meta.env.VITE_ML_API_URL ?? 'http://localhost:8001'
+import {
+  fetchPatchByFileName,
+  fetchSimilarPatches,
+  getPatchFileUrl,
+  getPatchFileUrlByName,
+  patchName,
+} from '../services/patch-service'
 
 const fileName = ref('')
 const searching = ref(false)
@@ -81,19 +81,13 @@ const loadingSimilar = ref(false)
 const embedError = ref(null)
 const similarPatches = ref([])
 
-function patchName(filePath) {
-  return filePath?.split(/[\\/]/).pop() ?? filePath
-}
-
-function fileUrl(filePath) {
-  // Serve the patch image via the backend's /patches/{id}/file endpoint.
-  // filePath is a relative path stored in the DB; we use the patch id from the object.
+function fileUrl() {
   if (!queryPatch.value?.id) return ''
-  return apiUrl(`/patches/${queryPatch.value.id}/file`)
+  return getPatchFileUrl(queryPatch.value.id)
 }
 
 function patchFileUrl(filename) {
-  return apiUrl(`/patches/by-file-name/${encodeURIComponent(filename)}/file`)
+  return getPatchFileUrlByName(filename)
 }
 
 function onImgError(e) {
@@ -111,9 +105,7 @@ async function search() {
   embedError.value = null
 
   try {
-    const res = await fetch(apiUrl(`/patches/by-file-name/${encodeURIComponent(name)}`))
-    if (!res.ok) throw new Error(`Patch not found (${res.status})`)
-    queryPatch.value = await res.json()
+    queryPatch.value = await fetchPatchByFileName(name)
   } catch (e) {
     searchError.value = e.message
     searching.value = false
@@ -129,27 +121,7 @@ async function fetchSimilar(filePath) {
   embedError.value = null
 
   try {
-    const embedRes = await fetch(`${ML_API}/embed_patches`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patch_paths: [filePath] }),
-    })
-    if (!embedRes.ok) throw new Error(`Embedding failed (${embedRes.status})`)
-    const embedData = await embedRes.json()
-    const vector = embedData.embeddings?.[0]?.vector
-    if (!vector) throw new Error('No embedding returned')
-
-    const searchRes = await fetch(`${ML_API}/search_patches`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ embedding: vector, top_k: 8 }),
-    })
-    if (!searchRes.ok) throw new Error(`Search failed (${searchRes.status})`)
-    const searchData = await searchRes.json()
-
-    // Exclude the query patch itself from results
-    const queryFile = patchName(filePath)
-    similarPatches.value = (searchData.results ?? []).filter((r) => r.patch_filename !== queryFile)
+    similarPatches.value = await fetchSimilarPatches(filePath)
   } catch (e) {
     embedError.value = e.message
   } finally {

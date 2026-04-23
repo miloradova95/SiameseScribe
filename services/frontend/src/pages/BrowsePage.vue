@@ -46,7 +46,8 @@
 import { onMounted, ref } from 'vue'
 import BrowseGrid from '@/components/browse/BrowseGrid.vue'
 import BrowseSidebar from '@/components/browse/BrowseSidebar.vue'
-import { apiUrl } from '@/lib/api'
+import { fetchImages } from '@/services/image-service'
+import { fetchPatchesByImageId } from '@/services/patch-service'
 
 const images = ref([])
 const selectedImage = ref(null)
@@ -61,10 +62,7 @@ async function loadAllImages() {
   error.value = null
 
   try {
-    const res = await fetch(apiUrl('/images'))
-    if (!res.ok) throw new Error('Failed to fetch images')
-
-    const data = await res.json()
+    const data = await fetchImages()
     images.value = Array.isArray(data) ? data : []
 
     if (images.value.length > 0) {
@@ -82,10 +80,7 @@ async function loadPatchesForImage(imageId) {
   patches.value = []
 
   try {
-    const res = await fetch(apiUrl(`/images/${imageId}/patches`))
-    if (!res.ok) throw new Error('Failed to fetch patches')
-
-    const data = await res.json()
+    const data = await fetchPatchesByImageId(imageId)
     patches.value = Array.isArray(data) ? data.slice(0, 4) : []
   } catch (err) {
     error.value = err.message || 'Failed to fetch patches'

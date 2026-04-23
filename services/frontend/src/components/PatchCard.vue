@@ -11,7 +11,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { apiUrl } from '../lib/api'
+import { getPatchFileUrl } from '../services/patch-service'
 
 const props = defineProps({
   patch: {
@@ -20,7 +20,7 @@ const props = defineProps({
   },
 })
 
-const fileUrl = computed(() => apiUrl(`/patches/${props.patch.id}/file`))
+const fileUrl = computed(() => getPatchFileUrl(props.patch.id))
 </script>
 
 <style scoped>

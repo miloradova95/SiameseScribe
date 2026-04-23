@@ -112,7 +112,7 @@
 <script setup>
 import { ref } from 'vue'
 import ImageCard from '../components/ImageCard.vue'
-import { apiUrl } from '../lib/api'
+import { uploadImage } from '../services/image-service'
 
 const selectedFile = ref(null)
 const localPreview = ref(null)
@@ -136,20 +136,8 @@ async function handleUpload() {
   error.value = null
   uploadedImage.value = null
 
-  const form = new FormData()
-  form.append('file', selectedFile.value)
-  if (group.value.trim()) form.append('group', group.value.trim())
-
   try {
-    const res = await fetch(apiUrl('/images/upload'), {
-      method: 'POST',
-      body: form,
-    })
-    if (!res.ok) {
-      const detail = await res.text()
-      throw new Error(`Upload failed (${res.status}): ${detail}`)
-    }
-    uploadedImage.value = await res.json()
+    uploadedImage.value = await uploadImage(selectedFile.value, group.value)
   } catch (e) {
     error.value = e.message
   } finally {
