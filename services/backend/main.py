@@ -1,8 +1,9 @@
 from pathlib import Path
 import csv
+import os
 import sys
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel, Session, select
 
@@ -10,11 +11,19 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
+from dotenv import load_dotenv
+load_dotenv(PROJECT_ROOT / '.env')
+
 from services.backend.database import engine
 from services.backend.routes.images import router as images_router
 from services.backend.routes.patches import router as patches_router
+from services.backend.routes.auth import router as auth_router
+from services.backend.routes.users import router as users_router
+from services.backend.routes.deps import get_current_user
 from services.backend.sqlDB.images import Image
 from services.backend.sqlDB.patches import Patch
+from services.backend.sqlDB.users import User
+from services.backend.services.auth_service import hash_password
 
 PREPROCESSED_DIR = PROJECT_ROOT / "data" / "dataset" / "preprocessed"
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp"}
@@ -33,6 +42,7 @@ ALLOWED_ORIGINS = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -44,6 +54,7 @@ def startup():
     SQLModel.metadata.create_all(engine)
     _seed_images()
     _seed_patches()
+    _seed_admin()
 
 def _seed_images():
     with Session(engine) as session:
@@ -100,6 +111,27 @@ def _seed_patches():
         session.commit()
 
 
+def _seed_admin():
+    with Session(engine) as session:
+        existing_admin = session.exec(select(User).where(User.role == "admin")).first()
+        if existing_admin:
+            return
+        username = os.getenv("ADMIN_USERNAME", "admin")
+        email = os.getenv("ADMIN_EMAIL", "admin@siamesescribe.local")
+        password = os.getenv("ADMIN_PASSWORD", "changeme123")
+        admin = User(
+            username=username,
+            email=email,
+            hashed_password=hash_password(password),
+            role="admin",
+        )
+        session.add(admin)
+        session.commit()
+        print(f"[startup] Admin user '{username}' created.")
+
+
+app.include_router(auth_router)
+app.include_router(users_router, dependencies=[Depends(get_current_user)])
 app.include_router(images_router)
 app.include_router(patches_router)
 
