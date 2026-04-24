@@ -9,6 +9,7 @@ sys.path.append(str(PROJECT_ROOT))
 
 import torch
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes import api
 from services.ML.app.chroma_client import get_chroma_client
@@ -20,12 +21,20 @@ CHROMA_PATH       = PROJECT_ROOT / "data" / "chromaDB" / "data" / "chroma_store"
 CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "patches_v1")
 EMBEDDING_DIM     = 128
 
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5175",
+]
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # Load Siamese embedding model
     model = SiameseNetwork(embedding_dim=EMBEDDING_DIM).to(device)
     if MODEL_PATH.exists():
         model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
@@ -36,7 +45,6 @@ async def lifespan(app: FastAPI):
     app.state.model = model
     app.state.device = device
 
-    # Load segmentation model
     try:
         seg_service = SegmentationService()
         app.state.seg_service = seg_service
@@ -44,7 +52,6 @@ async def lifespan(app: FastAPI):
         print(f"Warning: segmentation model failed to load: {e}")
         app.state.seg_service = None
 
-    # Load ChromaDB collection
     try:
         client = get_chroma_client(str(CHROMA_PATH))
         collection = client.get_collection(CHROMA_COLLECTION)
@@ -58,6 +65,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="ML Service", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(api.router)
 
 

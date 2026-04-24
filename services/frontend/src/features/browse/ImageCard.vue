@@ -41,5 +41,5 @@ const props = defineProps({
 
 defineEmits(['click'])
 
-const fileUrl = computed(() => apiUrl(`/images/${props.image.id}/file`))
+const fileUrl = computed(() => getImageFileUrl(props.image.id))
 </script>
