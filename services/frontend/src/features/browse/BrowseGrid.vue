@@ -4,14 +4,14 @@
       v-if="loading"
       class="rounded-3xl border border-brand-line bg-white/40 px-6 py-10 text-center text-brand-subtle"
     >
-      Lade Bilder...
+      Load Images...
     </div>
 
     <div
       v-else-if="images.length === 0"
       class="rounded-3xl border border-brand-line bg-white/40 px-6 py-10 text-center text-brand-subtle"
     >
-      Keine Bilder gefunden.
+      No Images found.
     </div>
 
     <div
@@ -30,7 +30,7 @@
 </template>
 
 <script setup>
-import ImageCard from '@/components/ImageCard.vue'
+import ImageCard from './ImageCard.vue'
 
 defineProps({
   images: {

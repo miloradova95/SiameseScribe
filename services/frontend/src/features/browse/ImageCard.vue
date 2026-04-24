@@ -26,7 +26,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { apiUrl } from '../lib/api'
+import { apiUrl } from '@/lib/api'
 
 const props = defineProps({
   image: {
