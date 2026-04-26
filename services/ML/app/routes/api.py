@@ -38,6 +38,7 @@ _embed_transforms = transforms.Compose([
 
 
 def _resolve_path(path_str: str) -> Path:
+    
     """
     Resolve a patch path to an absolute filesystem path.
 
@@ -46,7 +47,10 @@ def _resolve_path(path_str: str) -> Path:
     Paths coming from the segment endpoint are relative to PROJECT_ROOT.
     Handle both cases by trying PROJECT_ROOT.parent first, then PROJECT_ROOT.
     """
-    p = Path(path_str)
+    
+    normalized = path_str.replace("\\", "/")
+
+    p = Path(normalized)
     if p.is_absolute():
         return p
 
