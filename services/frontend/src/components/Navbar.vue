@@ -3,23 +3,23 @@
     
     <router-link
       to="/home"
-      class="text-[23px] uppercase tracking-[0.28em] font-semibold font-display"
+      class="text-[23px] uppercase tracking-[0.28em] font-semibold transition hover:text-[#c53114]"
     >
       peuafleu
     </router-link>
 
     <div class="flex items-center gap-12 text-[23px]">
-      <router-link to="/browse" class="transition hover:text-[#c53114]">
+      <router-link to="/browse" class="transition hover:text-[#c53114]" active-class="text-[#c53114]">
         Browse
       </router-link>
-      <router-link to="/upload" class="transition hover:text-[#c53114]">
+      <router-link to="/upload" class="transition hover:text-[#c53114]" active-class="text-[#c53114]">
         Upload
       </router-link>
-      <router-link to="/profile" class="transition hover:text-[#c53114]">
+      <router-link to="/profile" class="transition hover:text-[#c53114]" active-class="text-[#c53114]">
         Profile
       </router-link>
-      <router-link to="/home" class="transition hover:text-[#c53114]">
-        Home
+      <router-link to="/help" class="transition hover:text-[#c53114]" active-class="text-[#c53114]">
+        Help
       </router-link>
     </div>
 

@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 import LoginPage from '@/views/LoginPage.vue'
 import SignupPage from '@/views/SignupPage.vue'
-import HomePage from '@/views/HomePage.vue'
+import HelpPage from '@/views/HelpPage.vue'
 import UploadPage from '@/views/UploadPage.vue'
 import ProfilePage from '@/views/ProfilePage.vue'
 import BrowsePage from '@/views/BrowsePage.vue'
@@ -13,7 +13,7 @@ const routes = [
   { path: '/', redirect: '/login' },
   { path: '/login', name: 'login', component: LoginPage },
   { path: '/signup', name: 'signup', component: SignupPage },
-  { path: '/home', name: 'home', component: HomePage },
+  { path: '/help', name: 'help', component: HelpPage },
   { path: '/upload', name: 'upload', component: UploadPage },
   { path: '/profile', name: 'profile', component: ProfilePage },
   { path: '/browse', name: 'browse', component: BrowsePage,},
