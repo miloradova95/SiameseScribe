@@ -42,6 +42,7 @@
         </div>
 
         <div class="text-left text-sm text-zinc-500">
+          Klick auf ein Rechteck, um den Patch rechts anzuzeigen.
         </div>
       </div>
     </div>
@@ -61,6 +62,7 @@ const props = defineProps({
 const emit = defineEmits(['select-patch'])
 
 const imgRef = ref(null)
+const viewerRef = ref(null)
 
 const renderedWidth = ref(1)
 const renderedHeight = ref(1)
@@ -68,6 +70,7 @@ const renderedHeight = ref(1)
 const originalWidth = ref(1)
 const originalHeight = ref(1)
 
+// Beispiel: falls deine Patches immer 256x256 groß sind
 const PATCH_SIZE = 256
 
 function handleImageLoad() {
@@ -99,10 +102,15 @@ function isSelected(patch) {
   return props.selectedPatch?.patch_filename === patch.patch_filename
 }
 
-
+/**
+ * Optional:
+ * Wenn extrem viele Patches vorhanden sind, nicht alle gleichzeitig rendern.
+ * Hier erstmal einfache Begrenzung.
+ */
 const visiblePatches = computed(() => {
   if (!props.patches?.length) return []
 
+  // Erstmal Sicherheitsgrenze
   return props.patches.slice(0, 2000)
 })
 </script>

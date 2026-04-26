@@ -111,9 +111,8 @@
 
 <script setup>
 import { ref } from 'vue'
-import ImageCard from '../components/ImageCard.vue'
-import { uploadImage } from '@/services/image-service'
-
+import ImageCard from '../features/browse/ImageCard.vue'
+import { apiUrl } from '../lib/api'
 
 const selectedFile = ref(null)
 const localPreview = ref(null)

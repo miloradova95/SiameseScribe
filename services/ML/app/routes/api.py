@@ -46,8 +46,7 @@ def _resolve_path(path_str: str) -> Path:
     Paths coming from the segment endpoint are relative to PROJECT_ROOT.
     Handle both cases by trying PROJECT_ROOT.parent first, then PROJECT_ROOT.
     """
-    normalized = path_str.replace("\\", "/")
-    p = Path(normalized)
+    p = Path(path_str)
     if p.is_absolute():
         return p
 
