@@ -171,7 +171,7 @@
             type="button"
             class="rounded-full border border-[#8a6755] px-6 py-3 text-[15px]"
           >
-            Next Pen Flourish ›
+            Get random Pen Flourish ›
           </button>
         </div>
       </div>
