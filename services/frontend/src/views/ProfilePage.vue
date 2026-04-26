@@ -37,7 +37,7 @@
 
       <section>
         <div class="border-b border-[#d7cec7] px-12 py-10">
-          <h1 class="font-serif text-[64px] leading-none">
+          <h1 class="font-display text-[64px] leading-none">
             {{ pageTitle }}
           </h1>
         </div>

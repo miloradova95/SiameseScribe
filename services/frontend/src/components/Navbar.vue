@@ -3,7 +3,7 @@
     
     <router-link
       to="/home"
-      class="text-[23px] uppercase tracking-[0.28em] font-semibold"
+      class="text-[23px] uppercase tracking-[0.28em] font-semibold font-display"
     >
       peuafleu
     </router-link>
