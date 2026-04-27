@@ -5,7 +5,13 @@
     :class="selected ? 'border-[#6c4d3d] ring-1 ring-[#6c4d3d]' : 'border-brand-line'"
     @click="$emit('click')"
   >
-    <div class="aspect-[4/5] overflow-hidden bg-brand-surface">
+    <div class="relative aspect-[4/5] overflow-hidden bg-brand-surface">
+      
+      <!-- ✅ Bookmark Button -->
+      <div class="absolute top-2 right-2 z-10">
+        <BookmarkButton :item="image" />
+      </div>
+
       <img
         :src="fileUrl"
         :alt="image.fileName"
@@ -26,17 +32,12 @@
 
 <script setup>
 import { computed } from 'vue'
-import { getImageFileUrl } from '../services/image-service'
+import { getImageFileUrl } from '@/services/image-service'
+import BookmarkButton from '@/components/BookmarkButton.vue'
 
 const props = defineProps({
-  image: {
-    type: Object,
-    required: true,
-  },
-  selected: {
-    type: Boolean,
-    default: false,
-  },
+  image: Object,
+  selected: Boolean,
 })
 
 defineEmits(['click'])

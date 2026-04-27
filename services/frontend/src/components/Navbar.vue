@@ -1,24 +1,25 @@
 <template>
-  <nav class="flex items-center justify-between px-8 py-6 bg-[#f7f1eb] text-[#2b211d]">
+  <nav class="flex items-center justify-between px-12 py-8 bg-[#f7f1eb] text-[#2b211d]">
+    
     <router-link
       to="/home"
-      class="text-sm uppercase tracking-[0.2em] font-semibold"
+      class="text-[23px] uppercase tracking-[0.28em] font-semibold transition hover:text-[#c53114]"
     >
-      Pena Fleu
+      peuafleu
     </router-link>
 
-    <div class="flex items-center gap-8 text-sm">
-      <router-link to="/browse" class="hover:text-[#c53114] transition">
+    <div class="flex items-center gap-12 text-[23px]">
+      <router-link to="/browse" class="transition hover:text-[#c53114]" active-class="text-[#c53114]">
         Browse
       </router-link>
-      <router-link to="/upload" class="hover:text-[#c53114] transition">
+      <router-link to="/upload" class="transition hover:text-[#c53114]" active-class="text-[#c53114]">
         Upload
       </router-link>
-      <router-link to="/profile" class="hover:text-[#c53114] transition">
+      <router-link to="/profile" class="transition hover:text-[#c53114]" active-class="text-[#c53114]">
         Profile
       </router-link>
-      <router-link to="/home" class="hover:text-[#c53114] transition">
-        Home
+      <router-link to="/help" class="transition hover:text-[#c53114]" active-class="text-[#c53114]">
+        Help
       </router-link>
       <router-link v-if="authStore.isAdmin" to="/admin" class="hover:text-[#c53114] transition">
         Admin
@@ -31,6 +32,7 @@
         Logout
       </button>
     </div>
+
   </nav>
 </template>
 

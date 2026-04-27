@@ -54,6 +54,20 @@ cd services/frontend
 npm install
 ```
 
+## Environment Variables
+
+The backend requires a `.env` file in `services/backend/` for JWT auth and admin user seeding. Create it before starting the backend:
+
+```bash
+# services/backend/.env
+SECRET_KEY=change-this-to-a-random-secret-before-deploying
+ADMIN_USERNAME=admin
+ADMIN_EMAIL=admin@siamesescribe.local
+ADMIN_PASSWORD=changeme123
+```
+
+> Change `SECRET_KEY` and `ADMIN_PASSWORD` before any deployment.
+
 ## Running the Project
 
 Start each service in its own terminal from the project root.
