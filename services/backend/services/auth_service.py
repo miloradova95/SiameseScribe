@@ -2,7 +2,15 @@ import os
 import bcrypt
 from datetime import datetime, timedelta, timezone
 
-from jose import JWTError, jwt
+try:
+    from jose import JWTError, jwt
+except Exception as exc:
+    raise RuntimeError(
+        "JWT support requires the 'python-jose' package. "
+        "A different 'jose' package appears to be installed in this environment. "
+        "Run 'pip uninstall jose' and then 'pip install python-jose[cryptography]'."
+    ) from exc
+
 from fastapi import HTTPException, status
 
 ALGORITHM = "HS256"
