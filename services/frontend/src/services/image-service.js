@@ -1,4 +1,5 @@
 import { apiUrl } from '../lib/api'
+import { fetchPatchesByImageId } from './patch-service'
 
 function buildErrorMessage(prefix, response) {
   return `${prefix} (${response.status})`
@@ -44,4 +45,14 @@ export async function uploadImage(file, group) {
   }
 
   return response.json()
+}
+
+export async function runUploadPipeline(file, group) {
+  const image = await uploadImage(file, group)
+  const patches = image?.id ? await fetchPatchesByImageId(image.id) : []
+
+  return {
+    image,
+    patches,
+  }
 }

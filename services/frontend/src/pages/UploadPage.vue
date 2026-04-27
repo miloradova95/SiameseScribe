@@ -103,6 +103,9 @@
 
       <section v-if="uploadedImage" class="mt-12 w-full max-w-3xl text-left">
         <h2 class="mb-4 text-2xl font-semibold text-brand-text">Uploaded</h2>
+        <p class="mb-4 text-sm text-[#7b6e66]">
+          {{ uploadedPatches.length }} patch{{ uploadedPatches.length === 1 ? '' : 'es' }} generated
+        </p>
         <ImageCard :image="uploadedImage" />
       </section>
     </main>
@@ -112,7 +115,7 @@
 <script setup>
 import { ref } from 'vue'
 import ImageCard from '../components/ImageCard.vue'
-import { uploadImage } from '../services/image-service'
+import { runUploadPipeline } from '../services/image-service'
 
 const selectedFile = ref(null)
 const localPreview = ref(null)
@@ -120,6 +123,7 @@ const group = ref('')
 const uploading = ref(false)
 const error = ref(null)
 const uploadedImage = ref(null)
+const uploadedPatches = ref([])
 
 function onFileChange(e) {
   const file = e.target.files[0]
@@ -127,6 +131,7 @@ function onFileChange(e) {
   selectedFile.value = file
   localPreview.value = URL.createObjectURL(file)
   uploadedImage.value = null
+  uploadedPatches.value = []
   error.value = null
 }
 
@@ -135,9 +140,12 @@ async function handleUpload() {
   uploading.value = true
   error.value = null
   uploadedImage.value = null
+  uploadedPatches.value = []
 
   try {
-    uploadedImage.value = await uploadImage(selectedFile.value, group.value)
+    const result = await runUploadPipeline(selectedFile.value, group.value)
+    uploadedImage.value = result.image
+    uploadedPatches.value = result.patches
   } catch (e) {
     error.value = e.message
   } finally {
