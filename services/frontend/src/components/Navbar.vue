@@ -20,6 +20,21 @@
       <router-link to="/home" class="hover:text-[#c53114] transition">
         Home
       </router-link>
+      <router-link v-if="authStore.isAdmin" to="/admin" class="hover:text-[#c53114] transition">
+        Admin
+      </router-link>
+      <button
+        v-if="authStore.isLoggedIn"
+        @click="authStore.logout(); $router.push('/login')"
+        class="hover:text-[#c53114] transition"
+      >
+        Logout
+      </button>
     </div>
   </nav>
 </template>
+
+<script setup>
+import { useAuthStore } from '../stores/auth'
+const authStore = useAuthStore()
+</script>

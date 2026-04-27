@@ -17,6 +17,7 @@ from services.ML.app.services.SiameseNetwork import SiameseNetwork
 from services.ML.app.services.TripletLoss import TripletLoss
 from services.ML.app.services.PatchTripletDataset import PatchTripletDataset
 from services.ML.app.services.mlflow_utils import fix_mlflow_paths
+from services.ML.app.services.Evaluate import evaluate_quick
 
 # =========================
 # CONFIG
@@ -126,10 +127,22 @@ def main():
             "device":        device,
         })
 
+        best_mAP = 0.0
         for epoch in range(EPOCHS):
             loss = train_one_epoch(model, dataloader, optimizer, criterion, device)
             mlflow.log_metric("train_loss", loss, step=epoch)
-            print(f"Epoch {epoch + 1}/{EPOCHS}  loss: {loss:.4f}")
+
+            eval_metrics = evaluate_quick(model, device, top_k=5, epoch=epoch)
+            mlflow.log_metrics(
+                {"eval/precision_at_k": eval_metrics["precision_at_k"], "eval/mAP": eval_metrics["mAP"]},
+                step=epoch,
+            )
+            print(f"Epoch {epoch + 1}/{EPOCHS}  loss: {loss:.4f}  "
+                  f"P@5: {eval_metrics['precision_at_k']:.4f}  mAP: {eval_metrics['mAP']:.4f}")
+
+            if eval_metrics["mAP"] > best_mAP:
+                best_mAP = eval_metrics["mAP"]
+                torch.save(model.state_dict(), MODEL_SAVE_PATH.parent / "trainedModel_best.pth")
 
         # Save a versioned copy (never overwritten) and update the latest pointer
         versioned_path = MODEL_SAVE_PATH.parent / f"trainedModel_{short_id}.pth"
@@ -142,8 +155,12 @@ def main():
 
         print(f"\nVersioned weights: {versioned_path}")
         print(f"Latest pointer:    {MODEL_SAVE_PATH}")
+        print(f"Best epoch mAP:    {best_mAP:.4f}  → trainedModel_best.pth")
         print(f"MLflow run ID:     {run_id}")
-        print(f"View in UI:        mlflow ui --backend-store-uri \"{MLFLOW_DIR.as_uri()}\"")
+        print(f"Next steps:")
+        print(f"  1. python -m services.ML.app.services.Embedd --collection patches_v1 --mlflow_run_id {run_id}")
+        print(f"  2. python -m services.ML.app.services.Evaluate --collection patches_v1 --mlflow_run_id {run_id}")
+        print(f"View in UI: mlflow ui --backend-store-uri \"{MLFLOW_DIR.as_uri()}\"")
 
     return run_id
 

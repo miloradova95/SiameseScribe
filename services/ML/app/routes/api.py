@@ -12,6 +12,7 @@ from PIL import Image
 from torchvision import transforms
 
 from services.ML.app.services.Finetune import count_constructable_triplets, finetune
+from services.ML.app.services.HeatmapUtil import save_heatmap_overlay
 from services.ML.app.services.segment import extract_patches
 from shared.schemas.mlBackend import (
     EmbedAllPatchesResponse,
@@ -179,11 +180,50 @@ def search_patches(req: SearchPatchesRequest, request: Request):
 # ─────────────────────────────────────────────
 
 @router.post("/explain_pair", response_model=ExplainPairResponse)
-def explain_pair(req: ExplainPairRequest):
+def explain_pair(req: ExplainPairRequest, request: Request):
+    model = request.app.state.model
+    device = request.app.state.device
+
+    def _resolve(patch_path: str) -> Path:
+        resolved = Path(patch_path)
+        if not resolved.is_absolute():
+            resolved = PROJECT_ROOT / resolved
+        if not resolved.exists():
+            raise HTTPException(status_code=404, detail=f"Patch not found: {resolved}")
+        return resolved
+
+    query_path = _resolve(req.query_patch_path)
+    result_path = _resolve(req.result_patch_path)
+
+    query_id = Path(req.query_patch_path).stem
+    result_id = Path(req.result_patch_path).stem
+
+    query_pil = Image.open(query_path).convert("RGB")
+    result_pil = Image.open(result_path).convert("RGB")
+
+    query_w, query_h = query_pil.size
+
+    query_tensor = _embed_transforms(query_pil).unsqueeze(0).to(device)
+    result_tensor = _embed_transforms(result_pil).unsqueeze(0).to(device)
+
+    with torch.no_grad():
+        _, _, sfam = model.forward_with_sfam(
+            query_tensor, result_tensor, output_size=(query_h, query_w)
+        )
+
+    heatmaps_dir = PROJECT_ROOT / "data" / "heatmaps"
+    heatmaps_dir.mkdir(parents=True, exist_ok=True)
+
+    query_output_path = heatmaps_dir / f"q{query_id}_r{result_id}.png"
+    result_output_path = heatmaps_dir / f"r{result_id}_q{query_id}.png"
+
+    save_heatmap_overlay(query_pil, sfam, query_output_path)
+    save_heatmap_overlay(result_pil, sfam, result_output_path)
+
     return {
         "heatmaps": {
-            "query": "/data/heatmaps/q5001_r6001.png",
-            "result": "/data/heatmaps/r6001_q5001.png",
+            "query": query_output_path.relative_to(PROJECT_ROOT).as_posix(),
+            "result": result_output_path.relative_to(PROJECT_ROOT).as_posix(),
         }
     }
 

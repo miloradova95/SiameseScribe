@@ -80,6 +80,7 @@ data/sqlite/*.sqlite3
 data/sqlite/*.sqlite
 data/sqlite/*journal
 data/sqlite/__pycache__/
+data/sqlite/*.db
 
 # Datasets and generated media
 dataset/
@@ -100,5 +101,7 @@ services/**/data/
 data/mlruns/
 mlruns/
 mlartifacts/
+
+/CLaude.md
 
 data/chromaDB/data/chroma_store/
