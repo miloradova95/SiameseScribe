@@ -1,13 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
-import LoginPage from '../pages/LoginPage.vue'
-import SignupPage from '../pages/SignupPage.vue'
-import HomePage from '../pages/HomePage.vue'
-import UploadPage from '../pages/UploadPage.vue'
-import ProfilePage from '../pages/ProfilePage.vue'
-import BrowsePage from '../pages/BrowsePage.vue'
+import LoginPage from '@/views/LoginPage.vue'
+import SignupPage from '@/views/SignupPage.vue'
+import HelpPage from '@/views/HelpPage.vue'
+import UploadPage from '@/views/UploadPage.vue'
+import ProfilePage from '@/views/ProfilePage.vue'
+import BrowsePage from '@/views/BrowsePage.vue'
 import AdminPage from '../pages/AdminPage.vue'
+import AnnotatePage from '@/views/AnnotatePage.vue'
 
 
 const routes = [
@@ -19,6 +20,8 @@ const routes = [
   { path: '/profile', name: 'profile', component: ProfilePage, meta: { requiresAuth: true } },
   { path: '/browse', name: 'browse', component: BrowsePage, meta: { requiresAuth: true } },
   { path: '/admin', name: 'admin', component: AdminPage, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/help', name: 'help', component: HelpPage },
+  { path: '/browse/:fileName', name: 'annotate', component: AnnotatePage, props: true,}
 ]
 
 const router = createRouter({

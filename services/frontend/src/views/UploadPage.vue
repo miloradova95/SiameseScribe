@@ -115,6 +115,7 @@
 <script setup>
 import { ref } from 'vue'
 import ImageCard from '../components/ImageCard.vue'
+import { apiUrl } from '../lib/api'
 import { runUploadPipeline } from '../services/image-service'
 
 const selectedFile = ref(null)
