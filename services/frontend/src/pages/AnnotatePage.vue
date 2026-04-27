@@ -44,7 +44,7 @@
               </div>
 
               <p class="mt-3 text-center text-sm">
-                {{ bestMatch?.label || '—' }}
+                {{ bestMatch?.label || 'â€”' }}
               </p>
             </div>
 
@@ -58,7 +58,7 @@
                 </div>
 
                 <p class="mt-1 text-[24px]">
-                  {{ bestMatch?.score ?? '—' }}%
+                  {{ bestMatch?.score ?? 'â€”' }}%
                 </p>
               </div>
             </div>
@@ -159,7 +159,7 @@
 
         <div class="col-span-2 flex justify-end">
           <button class="rounded-full border border-[#8a6755] px-6 py-3 text-[15px]">
-            Next Pen Flourish ›
+            Next Pen Flourish â€º
           </button>
         </div>
       </div>
@@ -180,9 +180,11 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AnnotationSidebar from '@/features/annotate/AnnotationSidebar.vue'
 import { apiUrl } from '@/lib/api'
+import { fetchImages } from '@/services/image-service'
 import {
   fetchSimilarPatches,
   getPatchFileUrlByName,
+  fetchPatchesByImageId,
   patchName,
 } from '@/services/patch-service'
 
@@ -308,10 +310,7 @@ async function loadImageFromRoute() {
   similarError.value = null
 
   try {
-    const res = await fetch(apiUrl('/images'))
-    if (!res.ok) throw new Error('Failed to load images')
-
-    const data = await res.json()
+    const data = await fetchImages()
     const allImages = Array.isArray(data) ? data : []
 
     const found = allImages.find(
@@ -322,10 +321,7 @@ async function loadImageFromRoute() {
 
     if (!image.value?.id) return
 
-    const patchRes = await fetch(apiUrl(`/images/${image.value.id}/patches`))
-    if (!patchRes.ok) throw new Error('Failed to load patches')
-
-    const patchData = await patchRes.json()
+    const patchData = await fetchPatchesByImageId(image.value.id)
 
     patches.value = Array.isArray(patchData)
       ? patchData.map(normalizePatch)

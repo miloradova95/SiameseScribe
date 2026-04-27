@@ -1,14 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
-import LoginPage from '@/views/LoginPage.vue'
-import SignupPage from '@/views/SignupPage.vue'
-import HelpPage from '@/views/HelpPage.vue'
-import UploadPage from '@/views/UploadPage.vue'
-import ProfilePage from '@/views/ProfilePage.vue'
-import BrowsePage from '@/views/BrowsePage.vue'
-import AdminPage from '../pages/AdminPage.vue'
-import AnnotatePage from '@/views/AnnotatePage.vue'
+import LoginPage from '@/pages/LoginPage.vue'
+import SignupPage from '@/pages/SignupPage.vue'
+import HomePage from '@/pages/HomePage.vue'
+import HelpPage from '@/pages/HelpPage.vue'
+import UploadPage from '@/pages/UploadPage.vue'
+import ProfilePage from '@/pages/ProfilePage.vue'
+import BrowsePage from '@/pages/BrowsePage.vue'
+import AdminPage from '@/pages/AdminPage.vue'
+import AnnotatePage from '@/pages/AnnotatePage.vue'
 
 
 const routes = [

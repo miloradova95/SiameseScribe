@@ -28,7 +28,7 @@
           :disabled="loading"
           class="w-full bg-[#2b211d] text-white py-2 rounded text-sm hover:bg-[#c53114] transition"
         >
-          {{ loading ? 'Signing in…' : 'Sign in' }}
+          {{ loading ? 'Signing inâ€¦' : 'Sign in' }}
         </button>
       </form>
     </div>

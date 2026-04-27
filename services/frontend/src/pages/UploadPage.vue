@@ -90,7 +90,7 @@
           :disabled="!selectedFile || uploading"
           class="mt-10 inline-flex min-w-[160px] items-center justify-center rounded-full border border-brand-text bg-brand-bg px-8 py-3 text-xl font-medium text-brand-text transition hover:bg-brand-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {{ uploading ? 'Uploading…' : 'Upload' }}
+          {{ uploading ? 'Uploadingâ€¦' : 'Upload' }}
         </button>
       </form>
 
@@ -115,7 +115,6 @@
 <script setup>
 import { ref } from 'vue'
 import ImageCard from '../components/ImageCard.vue'
-import { apiUrl } from '../lib/api'
 import { runUploadPipeline } from '../services/image-service'
 
 const selectedFile = ref(null)

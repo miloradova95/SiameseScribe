@@ -1,4 +1,4 @@
- <template>
+<template>
 <div class="flex justify-center px-6 py-10">
   <main class="w-full max-w-[1700px] border border-[#9f9893] bg-[#fbf8f5]">
     <div class="grid min-h-[900px] grid-cols-[360px_1fr] gap-10">

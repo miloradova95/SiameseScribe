@@ -5,11 +5,11 @@
         <input
           v-model="fileName"
           type="text"
-          placeholder="Enter patch file name…"
+          placeholder="Enter patch file nameâ€¦"
           @keyup.enter="search"
         />
         <button @click="search" :disabled="searching || !fileName.trim()">
-          {{ searching ? 'Searching…' : 'Search' }}
+          {{ searching ? 'Searchingâ€¦' : 'Search' }}
         </button>
       </div>
       <p v-if="searchError" class="msg error">{{ searchError }}</p>
@@ -40,7 +40,7 @@
             }}</span>
           </p>
 
-          <div v-if="loadingSimilar" class="msg muted">Finding similar patches…</div>
+          <div v-if="loadingSimilar" class="msg muted">Finding similar patchesâ€¦</div>
 
           <div v-else-if="similarPatches.length" class="similar-grid">
             <div v-for="item in similarPatches" :key="item.patch_filename" class="patch-card">
@@ -86,8 +86,6 @@ function patchName(filePath) {
 }
 
 function fileUrl(filePath) {
-  // Serve the patch image via the backend's /patches/{id}/file endpoint.
-  // filePath is a relative path stored in the DB; we use the patch id from the object.
   if (!queryPatch.value?.id) return ''
   return apiUrl(`/patches/${queryPatch.value.id}/file`)
 }
@@ -147,7 +145,6 @@ async function fetchSimilar(filePath) {
     if (!searchRes.ok) throw new Error(`Search failed (${searchRes.status})`)
     const searchData = await searchRes.json()
 
-    // Exclude the query patch itself from results
     const queryFile = patchName(filePath)
     similarPatches.value = (searchData.results ?? []).filter((r) => r.patch_filename !== queryFile)
   } catch (e) {
@@ -220,6 +217,7 @@ async function fetchSimilar(filePath) {
 .muted {
   color: var(--color-text-secondary);
 }
+
 .error {
   color: var(--color-text-danger);
 }
