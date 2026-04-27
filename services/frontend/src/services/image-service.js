@@ -1,4 +1,4 @@
-import { apiUrl } from '../lib/api'
+import { apiUrl, fetchWithAuth } from '../lib/api'
 import { fetchPatchesByImageId } from './patch-service'
 
 function buildErrorMessage(prefix, response) {
@@ -10,7 +10,7 @@ export function getImageFileUrl(imageId) {
 }
 
 export async function fetchImages() {
-  const response = await fetch(apiUrl('/images'))
+  const response = await fetchWithAuth(apiUrl('/images'))
   if (!response.ok) {
     throw new Error(buildErrorMessage('Failed to fetch images', response))
   }
@@ -19,7 +19,7 @@ export async function fetchImages() {
 }
 
 export async function fetchRandomImage() {
-  const response = await fetch(apiUrl('/images/random'))
+  const response = await fetchWithAuth(apiUrl('/images/random'))
   if (!response.ok) {
     throw new Error(buildErrorMessage('Failed to fetch random image', response))
   }
@@ -35,7 +35,7 @@ export async function uploadImage(file, group) {
     formData.append('group', group.trim())
   }
 
-  const response = await fetch(apiUrl('/images/upload'), {
+  const response = await fetchWithAuth(apiUrl('/images/upload'), {
     method: 'POST',
     body: formData,
   })

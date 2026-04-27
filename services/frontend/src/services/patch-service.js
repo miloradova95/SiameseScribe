@@ -1,4 +1,4 @@
-import { apiUrl } from '../lib/api'
+import { apiUrl, fetchWithAuth } from '../lib/api'
 
 const ML_API = import.meta.env.VITE_ML_API_URL ?? 'http://localhost:8001'
 
@@ -19,7 +19,7 @@ export function getPatchFileUrlByName(fileName) {
 }
 
 export async function fetchPatchByFileName(fileName) {
-  const response = await fetch(apiUrl(`/patches/by-file-name/${encodeURIComponent(fileName)}`))
+  const response = await fetchWithAuth(apiUrl(`/patches/by-file-name/${encodeURIComponent(fileName)}`))
   if (!response.ok) {
     throw new Error(buildErrorMessage('Patch not found', response))
   }
@@ -28,7 +28,7 @@ export async function fetchPatchByFileName(fileName) {
 }
 
 export async function fetchPatchesByImageId(imageId) {
-  const response = await fetch(apiUrl(`/images/${imageId}/patches`))
+  const response = await fetchWithAuth(apiUrl(`/images/${imageId}/patches`))
   if (!response.ok) {
     throw new Error(buildErrorMessage('Failed to fetch patches', response))
   }
