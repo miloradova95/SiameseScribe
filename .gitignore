@@ -80,7 +80,7 @@ data/sqlite/*.sqlite3
 data/sqlite/*.sqlite
 data/sqlite/*journal
 data/sqlite/__pycache__/
-data/sqlite/*.db
+data/sqlite/siamesescribe.db
 
 # Datasets and generated media
 dataset/
