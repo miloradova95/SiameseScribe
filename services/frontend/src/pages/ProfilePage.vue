@@ -31,7 +31,7 @@
           </button>
         </nav>
 
-        <button class="mt-auto px-4 py-3 text-left text-xl hover:opacity-70">
+        <button class="mt-auto px-4 py-3 text-left text-xl hover:opacity-70" @click="logout">
           Logout
         </button>
       </aside>
@@ -45,7 +45,61 @@
 
         <div class="px-12 py-9">
           <template v-if="activeTab === 'feedback'">
-            <p class="text-lg">My Feedback content here.</p>
+            <div v-if="feedbackLoading" class="py-8 text-lg text-[#8a7568]">
+              Loading your feedback...
+            </div>
+
+            <div v-else-if="feedbackError" class="py-8 text-lg text-red-700">
+              {{ feedbackError }}
+            </div>
+
+            <div v-else-if="feedbackItems.length" class="space-y-4">
+              <article
+                v-for="item in feedbackItems"
+                :key="item.id"
+                class="grid grid-cols-[160px_1fr_160px] gap-6 rounded-2xl border border-[#d7cec7] bg-white/60 p-5"
+              >
+                <img
+                  :src="getPatchImageUrl(item.query_patch_id)"
+                  :alt="item.query_patch_file_name"
+                  class="h-32 w-full rounded-xl bg-[#ebe3db] object-cover"
+                />
+
+                <div class="flex flex-col justify-center">
+                  <div class="mb-3 flex items-center gap-3">
+                    <span
+                      class="rounded-full px-3 py-1 text-sm font-semibold"
+                      :class="item.label === 'similar' ? 'bg-[#ddebdc] text-[#315b2c]' : 'bg-[#f3dfdc] text-[#8f3a2b]'"
+                    >
+                      {{ item.label === 'similar' ? 'Similar' : 'Not Similar' }}
+                    </span>
+                    <span class="text-sm text-[#8a7568]">
+                      {{ formatFeedbackDate(item.created_at) }}
+                    </span>
+                  </div>
+
+                  <p class="text-lg font-semibold text-[#5b4033]">
+                    {{ item.query_patch_file_name }}
+                  </p>
+                  <p class="my-1 text-sm uppercase tracking-[0.18em] text-[#b19382]">
+                    compared with
+                  </p>
+                  <p class="text-lg font-semibold text-[#5b4033]">
+                    {{ item.result_patch_file_name }}
+                  </p>
+                </div>
+
+                <img
+                  :src="getPatchImageUrl(item.result_patch_id)"
+                  :alt="item.result_patch_file_name"
+                  class="h-32 w-full rounded-xl bg-[#ebe3db] object-cover"
+                />
+              </article>
+            </div>
+
+            <p v-else class="text-lg text-[#8a7568]">
+              You have not saved any feedback yet.
+            </p>
           </template>
 
           <template v-else-if="activeTab === 'uploads'">
@@ -77,14 +131,21 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import ImageCard from '@/components/ImageCard.vue'
+import { apiUrl } from '@/lib/api'
+import { fetchMyFeedback } from '@/services/patch-service'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const activeTab = ref('feedback')
 const bookmarks = ref([])
+const feedbackItems = ref([])
+const feedbackLoading = ref(false)
+const feedbackError = ref(null)
 
 const pageTitle = computed(() => {
   if (activeTab.value === 'bookmarks') return 'Bookmarks'
@@ -102,10 +163,48 @@ function goToImage(image) {
   router.push(`/browse/${encodeURIComponent(image.fileName)}`)
 }
 
+function getPatchImageUrl(patchId) {
+  return apiUrl(`/patches/${patchId}/file`)
+}
+
+function formatFeedbackDate(value) {
+  return new Date(value).toLocaleString()
+}
+
+async function loadFeedback() {
+  feedbackLoading.value = true
+  feedbackError.value = null
+
+  try {
+    feedbackItems.value = await fetchMyFeedback()
+  } catch (error) {
+    feedbackError.value = error.message || 'Failed to load your feedback.'
+  } finally {
+    feedbackLoading.value = false
+  }
+}
+
+function logout() {
+  authStore.logout()
+  router.push('/login')
+}
+
 onMounted(() => {
   loadBookmarks()
+  loadFeedback()
 
   window.addEventListener('bookmarks-updated', loadBookmarks)
   window.addEventListener('storage', loadBookmarks)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('bookmarks-updated', loadBookmarks)
+  window.removeEventListener('storage', loadBookmarks)
+})
+
+watch(activeTab, (tab) => {
+  if (tab === 'feedback' && !feedbackLoading.value) {
+    loadFeedback()
+  }
 })
 </script>

@@ -201,6 +201,7 @@ import { fetchImages } from '@/services/image-service'
 import {
   fetchSimilarPatches,
   fetchPatchByFileName,
+  fetchMyFeedbackForPair,
   getPatchFileUrlByName,
   fetchPatchesByImageId,
   patchName,
@@ -224,6 +225,7 @@ const feedbackSaving = ref(false)
 const feedbackError = ref(null)
 const lastFeedbackLabel = ref(null)
 const feedbackSavedAt = ref(0)
+const feedbackByPair = ref({})
 
 const fileName = computed(() => route.params.fileName)
 
@@ -255,8 +257,8 @@ const feedbackStatusText = computed(() => {
   if (feedbackError.value) return feedbackError.value
   if (lastFeedbackLabel.value && feedbackSavedAt.value) {
     return lastFeedbackLabel.value === 'similar'
-      ? 'Saved as similar.'
-      : 'Saved as not similar.'
+      ? 'Saved as similar for this patch pair.'
+      : 'Saved as not similar for this patch pair.'
   }
   if (!canSubmitFeedback.value) return 'Select a patch with a valid best match to save feedback.'
   return 'Click Similar or Not Similar to save feedback.'
@@ -315,6 +317,16 @@ function clearFeedbackState() {
   feedbackSavedAt.value = 0
 }
 
+function currentFeedbackKey() {
+  if (!selectedPatch.value?.id || !bestMatch.value?.id) return null
+  return `${selectedPatch.value.id}:${bestMatch.value.id}`
+}
+
+function applyFeedbackState(feedback) {
+  lastFeedbackLabel.value = feedback?.label ?? null
+  feedbackSavedAt.value = feedback ? Date.parse(feedback.created_at) || Date.now() : 0
+}
+
 function feedbackButtonClass(label) {
   const isActive = lastFeedbackLabel.value === label && feedbackSavedAt.value
   const isDisabled = feedbackSaving.value || !canSubmitFeedback.value
@@ -342,12 +354,56 @@ async function submitFeedback(label) {
       resultPatchId: bestMatch.value.id,
       label,
     })
-    lastFeedbackLabel.value = label
-    feedbackSavedAt.value = Date.now()
+    const key = currentFeedbackKey()
+    const savedFeedback = {
+      query_patch_id: selectedPatch.value.id,
+      result_patch_id: bestMatch.value.id,
+      label,
+      created_at: new Date().toISOString(),
+    }
+
+    if (key) {
+      feedbackByPair.value = {
+        ...feedbackByPair.value,
+        [key]: savedFeedback,
+      }
+    }
+
+    applyFeedbackState(savedFeedback)
   } catch (error) {
     feedbackError.value = error.message || 'Failed to save feedback.'
   } finally {
     feedbackSaving.value = false
+  }
+}
+
+async function loadExistingFeedbackForCurrentPair() {
+  const key = currentFeedbackKey()
+
+  if (!key) {
+    applyFeedbackState(null)
+    return
+  }
+
+  if (Object.prototype.hasOwnProperty.call(feedbackByPair.value, key)) {
+    applyFeedbackState(feedbackByPair.value[key])
+    return
+  }
+
+  try {
+    const feedback = await fetchMyFeedbackForPair({
+      queryPatchId: selectedPatch.value.id,
+      resultPatchId: bestMatch.value.id,
+    })
+
+    feedbackByPair.value = {
+      ...feedbackByPair.value,
+      [key]: feedback,
+    }
+    feedbackError.value = null
+    applyFeedbackState(feedback)
+  } catch (error) {
+    feedbackError.value = error.message || 'Failed to load existing feedback.'
   }
 }
 
@@ -379,6 +435,7 @@ async function loadSimilarForPatch(patch) {
     )
 
     similarPatches.value = resolvedPatches
+    await loadExistingFeedbackForCurrentPair()
   } catch (error) {
     similarError.value = error.message || 'Failed to load similar patches.'
   } finally {

@@ -86,3 +86,25 @@ export async function saveFeedback({ queryPatchId, resultPatchId, label }) {
 
   return response.json()
 }
+
+export async function fetchMyFeedback() {
+  const response = await fetchWithAuth(apiUrl('/feedback/mine'))
+  if (!response.ok) {
+    throw new Error(buildErrorMessage('Failed to fetch feedback', response))
+  }
+
+  return response.json()
+}
+
+export async function fetchMyFeedbackForPair({ queryPatchId, resultPatchId }) {
+  const response = await fetchWithAuth(
+    apiUrl(
+      `/feedback/mine/by-pair?query_patch_id=${encodeURIComponent(queryPatchId)}&result_patch_id=${encodeURIComponent(resultPatchId)}`
+    )
+  )
+  if (!response.ok) {
+    throw new Error(buildErrorMessage('Failed to fetch feedback', response))
+  }
+
+  return response.json()
+}
