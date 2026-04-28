@@ -1,36 +1,78 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-[#f7f1eb]">
-    <div class="w-full max-w-sm p-8 bg-white rounded shadow">
-      <h1 class="text-2xl font-semibold text-[#2b211d] mb-6">Sign in</h1>
-      <form @submit.prevent="submit">
-        <div class="mb-4">
-          <label class="block text-sm mb-1">Username</label>
-          <input
-            v-model="username"
-            type="text"
-            class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-            required
-            autofocus
-          />
-        </div>
-        <div class="mb-6">
-          <label class="block text-sm mb-1">Password</label>
-          <input
-            v-model="password"
-            type="password"
-            class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-            required
-          />
-        </div>
-        <p v-if="error" class="text-red-600 text-sm mb-4">{{ error }}</p>
-        <button
-          type="submit"
-          :disabled="loading"
-          class="w-full bg-[#2b211d] text-white py-2 rounded text-sm hover:bg-[#c53114] transition"
+  <div class="min-h-screen bg-[#f7f1eb] flex items-center text-[#5b4033] scale-150">
+    
+    <div class="mx-auto w-full max-w-[1400px] px-16 grid grid-cols-[1fr_420px] items-center gap-20">
+      
+      <section>
+        <h1
+          class="font-display text-[96px] font-medium uppercase leading-none tracking-[0.08em]"
         >
-          {{ loading ? 'Signing inâ€¦' : 'Sign in' }}
-        </button>
-      </form>
+          PEU A FLEU
+        </h1>
+
+        <p class="mt-6 max-w-[620px] text-[24px] leading-snug">
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+          Phasellus pretium ex vitae ipsum egestas,
+        </p>
+      </section>
+
+
+      <section
+        class="rounded-[30px] bg-[#5b4033] px-12 py-14 text-[#fbf8f5] shadow-xl"
+      >
+        <form @submit.prevent="submit">
+
+          <div class="mb-5">
+            <label class="mb-2 block text-[18px]">Username</label>
+            <input
+              v-model="username"
+              type="text"
+              required
+              autofocus
+              class="h-14 w-full rounded-[22px] border border-[#fbf8f5] bg-transparent px-5 text-[17px] text-[#fbf8f5] outline-none focus:ring-2 focus:ring-white/40"
+            />
+          </div>
+
+          <div class="mb-5">
+            <label class="mb-2 block text-[18px]">Password</label>
+            <input
+              v-model="password"
+              type="password"
+              required
+              class="h-14 w-full rounded-[22px] border border-[#fbf8f5] bg-transparent px-5 text-[17px] text-[#fbf8f5] outline-none focus:ring-2 focus:ring-white/40"
+            />
+          </div>
+
+          <!-- REMEMBER -->
+          <label class="mb-6 flex items-center gap-3 text-[17px]">
+            <input type="checkbox" class="h-5 w-5 rounded border-white" />
+            Remember me
+          </label>
+
+          <!-- ERROR -->
+          <p v-if="error" class="mb-4 text-sm text-red-200">
+            {{ error }}
+          </p>
+
+          <!-- BUTTON -->
+          <button
+            type="submit"
+            :disabled="loading"
+            class="w-full rounded-full bg-[#e9e1d9] py-4 font-display text-[20px] uppercase tracking-[0.35em] text-[#5b4033] shadow-md transition hover:bg-[#dcd2c8] disabled:opacity-60"
+          >
+            {{ loading ? 'Signing in...' : 'Login' }}
+          </button>
+
+          <p class="mt-5 text-[15px] leading-snug">
+            By logging in, you agree to the<br />
+            <a href="#" class="text-[#4db7ff] hover:underline">Terms of Use</a>
+            and
+            <a href="#" class="text-[#4db7ff] hover:underline">Privacy Policy</a>
+          </p>
+
+        </form>
+      </section>
+
     </div>
   </div>
 </template>
@@ -51,9 +93,10 @@ const loading = ref(false)
 async function submit() {
   error.value = ''
   loading.value = true
+
   try {
     await authStore.login(username.value, password.value)
-    router.push('/home')
+    router.push('/browse')
   } catch (e) {
     error.value = e.message
   } finally {

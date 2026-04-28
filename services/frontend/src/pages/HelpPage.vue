@@ -1,5 +1,5 @@
 <template>
-  <div class="home">
+  <div class="help">
     <section class="search-section">
       <div class="search-bar">
         <input
@@ -9,7 +9,7 @@
           @keyup.enter="search"
         />
         <button @click="search" :disabled="searching || !fileName.trim()">
-          {{ searching ? 'Searchingâ€¦' : 'Search' }}
+          {{ searching ? 'Searching...' : 'Search' }}
         </button>
       </div>
       <p v-if="searchError" class="msg error">{{ searchError }}</p>
@@ -156,7 +156,7 @@ async function fetchSimilar(filePath) {
 </script>
 
 <style scoped>
-.home {
+.help {
   padding: 32px 24px;
   max-width: 1100px;
   margin: 0 auto;

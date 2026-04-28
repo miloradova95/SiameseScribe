@@ -30,7 +30,7 @@
               class="transition hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-40"
               @click="loadRandom"
             >
-              {{ loading ? 'Loading...' : 'Random' }}
+              {{ loading ? 'Loading...' : 'Get Random Image' }}
             </button>
           </div>
         </div>

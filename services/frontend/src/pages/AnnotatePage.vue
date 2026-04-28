@@ -44,7 +44,7 @@
               </div>
 
               <p class="mt-3 text-center text-sm">
-                {{ bestMatch?.label || 'â€”' }}
+                {{ bestMatch?.label || '-' }}
               </p>
             </div>
 
@@ -58,7 +58,7 @@
                 </div>
 
                 <p class="mt-1 text-[24px]">
-                  {{ bestMatch?.score ?? 'â€”' }}%
+                  {{ bestMatch?.score ?? '-' }}%
                 </p>
               </div>
             </div>
@@ -159,7 +159,7 @@
 
         <div class="col-span-2 flex justify-end">
           <button class="rounded-full border border-[#8a6755] px-6 py-3 text-[15px]">
-            Next Pen Flourish â€º
+            Get Random Image
           </button>
         </div>
       </div>

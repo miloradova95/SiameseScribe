@@ -2,7 +2,7 @@
   <nav class="flex items-center justify-between px-12 py-8 bg-[#f7f1eb] text-[#2b211d]">
     
     <router-link
-      to="/home"
+      to="/help"
       class="text-[23px] uppercase tracking-[0.28em] font-semibold transition hover:text-[#c53114]"
     >
       peuafleu
