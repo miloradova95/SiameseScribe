@@ -44,14 +44,7 @@
             :selected-image-id="selectedImage?.id"
             :loading="initialLoading"
             @select="selectImage"
-          />
-
-          <Pagination
-            :current-page="currentPage"
-            :total-pages="totalPages"
-            :page-size="pageSize"
-            @change="goToPage"
-          />     
+          />    
         </div>
 
         <BrowseInspector
@@ -61,6 +54,12 @@
           @zoom="openZoom"
         />
       </section>
+           <Pagination
+            :current-page="currentPage"
+            :total-pages="totalPages"
+            :page-size="pageSize"
+            @change="goToPage"
+          /> 
     </main>
 
     <Teleport to="body">

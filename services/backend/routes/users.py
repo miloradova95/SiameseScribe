@@ -56,3 +56,40 @@ def deactivate_user(
     session.commit()
     session.refresh(user)
     return user
+
+@router.patch("/{user_id}/activate", response_model=UserResponse)
+def activate_user(
+    user_id: int,
+    session: Session = Depends(get_session),
+    _: User = Depends(require_admin),
+):
+    user = session.get(User, user_id)
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    user.is_active = True
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    return user
+
+@router.delete("/{user_id}")
+def delete_user(
+    user_id: int,
+    session: Session = Depends(get_session),
+    current_admin: User = Depends(require_admin),
+):
+    user = session.get(User, user_id)
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if user.id == current_admin.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete yourself")
+
+    session.delete(user)
+    session.commit()
+
+    return {"detail": "User deleted"}

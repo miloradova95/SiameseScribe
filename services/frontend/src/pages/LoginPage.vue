@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-[#f7f1eb] flex items-center text-[#5b4033] scale-150">
+  <div class="min-h-screen bg-[#f7f1eb] flex items-center text-[#5b4033]">
     
     <div class="mx-auto w-full max-w-[1400px] px-16 grid grid-cols-[1fr_420px] items-center gap-20">
       
