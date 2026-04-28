@@ -1,9 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-
 import LoginPage from '@/pages/LoginPage.vue'
 import SignupPage from '@/pages/SignupPage.vue'
-import HomePage from '@/pages/HomePage.vue'
 import HelpPage from '@/pages/HelpPage.vue'
 import UploadPage from '@/pages/UploadPage.vue'
 import ProfilePage from '@/pages/ProfilePage.vue'
@@ -16,12 +14,11 @@ const routes = [
   { path: '/', redirect: '/login' },
   { path: '/login', name: 'login', component: LoginPage },
   { path: '/signup', name: 'signup', component: SignupPage },
-  { path: '/home', name: 'home', component: HomePage, meta: { requiresAuth: true } },
   { path: '/upload', name: 'upload', component: UploadPage, meta: { requiresAuth: true } },
   { path: '/profile', name: 'profile', component: ProfilePage, meta: { requiresAuth: true } },
   { path: '/browse', name: 'browse', component: BrowsePage, meta: { requiresAuth: true } },
   { path: '/admin', name: 'admin', component: AdminPage, meta: { requiresAuth: true, adminOnly: true } },
-  { path: '/help', name: 'help', component: HelpPage },
+  { path: '/help', name: 'help', component: HelpPage, meta: { requiresAuth: true } },
   { path: '/browse/:fileName', name: 'annotate', component: AnnotatePage, props: true,}
 ]
 
@@ -41,10 +38,10 @@ router.beforeEach(async (to, _from, next) => {
     return next('/login')
   }
   if (to.meta.adminOnly && !authStore.isAdmin) {
-    return next('/home')
+    return next('/help')
   }
   if (to.path === '/login' && authStore.isLoggedIn) {
-    return next('/home')
+    return next('/help')
   }
 
   next()

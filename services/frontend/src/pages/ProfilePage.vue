@@ -1,7 +1,6 @@
 <template>
-<div class="flex justify-center px-6 py-10">
-  <main class="w-full max-w-[1700px] border border-[#9f9893] bg-[#fbf8f5]">
-    <div class="grid min-h-[900px] grid-cols-[360px_1fr] gap-10">
+  <main class="min-h-[calc(100vh-72px)] bg-[#f7f1eb] text-[#5b4033]">
+    <div class="grid min-h-[calc(100vh-72px)] grid-cols-[285px_1fr]">
       <aside class="flex flex-col border-r border-[#d7cec7] px-8 py-7">
         <h2 class="mb-6 text-xl font-semibold">Profile</h2>
 
@@ -73,7 +72,6 @@
       </section>
     </div>
   </main>
-</div>
 </template>
 
 <script setup>

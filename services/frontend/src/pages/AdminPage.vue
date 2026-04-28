@@ -45,22 +45,83 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="u in users" :key="u.id" class="border-b">
-          <td class="py-2 pr-4">{{ u.username }}</td>
-          <td class="py-2 pr-4">{{ u.email }}</td>
-          <td class="py-2 pr-4">{{ u.role }}</td>
-          <td class="py-2 pr-4">{{ u.is_active ? '✓' : '✗' }}</td>
-          <td class="py-2">
+      <tr
+        v-for="u in users"
+        :key="u.id"
+        class="border-t border-[#d7cec7] transition hover:bg-[#f4eee9]"
+      >
+        <td class="px-5 py-4 font-medium text-[#2b211d]">
+          {{ u.username }}
+        </td>
+
+        <td class="px-5 py-4 text-[#5b4033]">
+          {{ u.email }}
+        </td>
+
+        <td class="px-5 py-4">
+          <span
+            class="rounded-full px-3 py-1 text-xs font-medium"
+            :class="
+              u.role === 'admin'
+                ? 'bg-[#6c4f3d] text-white'
+                : 'bg-[#e5dbd4] text-[#5b4033]'
+            "
+          >
+            {{ u.role }}
+          </span>
+        </td>
+
+        <td class="px-5 py-4">
+          <span
+            class="rounded-full px-3 py-1 text-xs font-medium"
+            :class="
+              u.is_active
+                ? 'bg-[#dcebc9] text-green-800'
+                : 'bg-[#efd6cf] text-red-800'
+            "
+          >
+            {{ u.is_active ? 'Active' : 'Inactive' }}
+          </span>
+        </td>
+
+        <td class="px-5 py-4">
+          <div
+            v-if="u.id !== authStore.user?.id"
+            class="flex justify-end gap-2"
+          >
             <button
-              v-if="u.is_active && u.id !== authStore.user?.id"
+              v-if="u.is_active"
               @click="deactivate(u.id)"
-              class="text-red-600 text-xs hover:underline"
+              class="rounded-full border border-[#c53114] px-3 py-1 text-xs text-[#c53114] transition hover:bg-[#c53114] hover:text-white"
             >
               Deactivate
             </button>
-          </td>
-        </tr>
-      </tbody>
+
+            <button
+              v-else
+              @click="activate(u.id)"
+              class="rounded-full border border-green-700 px-3 py-1 text-xs text-green-700 transition hover:bg-green-700 hover:text-white"
+            >
+              Activate
+            </button>
+
+            <button
+              @click="deleteUser(u.id)"
+              class="rounded-full bg-[#c53114] px-3 py-1 text-xs text-white transition hover:opacity-80"
+            >
+              Delete
+            </button>
+          </div>
+
+          <span
+            v-else
+            class="block text-right text-xs text-[#9b8b82]"
+          >
+            Current user
+          </span>
+        </td>
+      </tr>
+    </tbody>
     </table>
     <p v-if="loadError" class="text-red-600 text-sm mt-4">{{ loadError }}</p>
   </div>
@@ -106,6 +167,24 @@ async function createUser() {
 
 async function deactivate(userId) {
   const res = await fetchWithAuth(apiUrl(`/users/${userId}/deactivate`), { method: 'PATCH' })
+  if (res.ok) await loadUsers()
+}
+
+async function activate(userId) {
+  const res = await fetchWithAuth(apiUrl(`/users/${userId}/activate`), {
+    method: 'PATCH',
+  })
+
+  if (res.ok) await loadUsers()
+}
+
+async function deleteUser(userId) {
+  if (!confirm('Delete this user permanently?')) return
+
+  const res = await fetchWithAuth(apiUrl(`/users/${userId}`), {
+    method: 'DELETE',
+  })
+
   if (res.ok) await loadUsers()
 }
 

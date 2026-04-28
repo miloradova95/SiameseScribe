@@ -2,13 +2,13 @@
   <nav class="flex items-center justify-between px-12 py-8 bg-[#f7f1eb] text-[#2b211d]">
     
     <router-link
-      to="/home"
+      to="/help"
       class="text-[23px] uppercase tracking-[0.28em] font-semibold transition hover:text-[#c53114]"
     >
       peuafleu
     </router-link>
 
-    <div class="flex items-center gap-12 text-[23px]">
+    <div class="flex items-center gap-12 text-[16px]">
       <router-link to="/browse" class="transition hover:text-[#c53114]" active-class="text-[#c53114]">
         Browse
       </router-link>
