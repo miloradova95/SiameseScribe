@@ -17,11 +17,13 @@ load_dotenv(PROJECT_ROOT / '.env')
 from services.backend.database import engine
 from services.backend.routes.images import router as images_router
 from services.backend.routes.patches import router as patches_router
+from services.backend.routes.feedback import router as feedback_router
 from services.backend.routes.auth import router as auth_router
 from services.backend.routes.users import router as users_router
 from services.backend.routes.deps import get_current_user
 from services.backend.sqlDB.images import Image
 from services.backend.sqlDB.patches import Patch
+from services.backend.sqlDB.feedback import Feedback
 from services.backend.sqlDB.users import User
 from services.backend.services.auth_service import hash_password
 
@@ -134,6 +136,7 @@ app.include_router(auth_router)
 app.include_router(users_router, dependencies=[Depends(get_current_user)])
 app.include_router(images_router)
 app.include_router(patches_router)
+app.include_router(feedback_router)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)

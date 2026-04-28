@@ -75,21 +75,38 @@
                 </div>
 
                 <div class="flex gap-3">
-                  <button class="rounded-full border border-[#8a6755] px-5 py-2 text-sm">
+                  <button
+                    class="rounded-full border px-5 py-2 text-sm transition"
+                    :class="feedbackButtonClass('similar')"
+                    :disabled="feedbackSaving || !canSubmitFeedback"
+                    @click="submitFeedback('similar')"
+                  >
                     Similar
                   </button>
-                  <button class="rounded-full border border-[#8a6755] px-5 py-2 text-sm">
+                  <button
+                    class="rounded-full border px-5 py-2 text-sm transition"
+                    :class="feedbackButtonClass('not_similar')"
+                    :disabled="feedbackSaving || !canSubmitFeedback"
+                    @click="submitFeedback('not_similar')"
+                  >
                     Not Similar
                   </button>
-                  <button class="rounded-full border border-[#8a6755] px-5 py-2 text-sm">
+                  <button
+                    class="rounded-full border border-[#8a6755] px-5 py-2 text-sm"
+                    :disabled="feedbackSaving"
+                    @click="clearFeedbackState"
+                  >
                     Uncertain
                   </button>
                 </div>
               </div>
 
-              <button class="rounded-full bg-[#6c4f3d] px-7 py-2 text-white">
-                Submit
-              </button>
+              <p
+                class="text-sm"
+                :class="feedbackError ? 'text-red-700' : 'text-[#7f6a5c]'"
+              >
+                {{ feedbackStatusText }}
+              </p>
             </div>
           </div>
 
@@ -183,9 +200,11 @@ import { apiUrl } from '@/lib/api'
 import { fetchImages } from '@/services/image-service'
 import {
   fetchSimilarPatches,
+  fetchPatchByFileName,
   getPatchFileUrlByName,
   fetchPatchesByImageId,
   patchName,
+  saveFeedback,
 } from '@/services/patch-service'
 
 const route = useRoute()
@@ -201,6 +220,10 @@ const selectedPatch = ref(null)
 const similarPatches = ref([])
 const similarLoading = ref(false)
 const similarError = ref(null)
+const feedbackSaving = ref(false)
+const feedbackError = ref(null)
+const lastFeedbackLabel = ref(null)
+const feedbackSavedAt = ref(0)
 
 const fileName = computed(() => route.params.fileName)
 
@@ -226,6 +249,18 @@ const selectedPatchLabel = computed(() => {
 })
 
 const bestMatch = computed(() => similarPatches.value[0] || null)
+const canSubmitFeedback = computed(() => Boolean(selectedPatch.value?.id && bestMatch.value?.id))
+const feedbackStatusText = computed(() => {
+  if (feedbackSaving.value) return 'Saving feedback...'
+  if (feedbackError.value) return feedbackError.value
+  if (lastFeedbackLabel.value && feedbackSavedAt.value) {
+    return lastFeedbackLabel.value === 'similar'
+      ? 'Saved as similar.'
+      : 'Saved as not similar.'
+  }
+  if (!canSubmitFeedback.value) return 'Select a patch with a valid best match to save feedback.'
+  return 'Click Similar or Not Similar to save feedback.'
+})
 
 const mainImageSrc = computed(() => {
   if (!image.value?.id) return fallbackImage
@@ -251,6 +286,7 @@ const selectedPatchImage = computed(() => {
 
 async function selectPatch(patch) {
   selectedPatch.value = patch
+  clearFeedbackState()
   await loadSimilarForPatch(patch)
 }
 
@@ -272,6 +308,49 @@ function handleImageError(event) {
   event.target.src = fallbackImage
 }
 
+function clearFeedbackState() {
+  feedbackSaving.value = false
+  feedbackError.value = null
+  lastFeedbackLabel.value = null
+  feedbackSavedAt.value = 0
+}
+
+function feedbackButtonClass(label) {
+  const isActive = lastFeedbackLabel.value === label && feedbackSavedAt.value
+  const isDisabled = feedbackSaving.value || !canSubmitFeedback.value
+
+  if (isActive) {
+    return 'border-[#6c4f3d] bg-[#6c4f3d] text-white'
+  }
+
+  if (isDisabled) {
+    return 'border-[#c8baae] text-[#b49f91]'
+  }
+
+  return 'border-[#8a6755] text-[#5b4033] hover:bg-[#f0e7e0]'
+}
+
+async function submitFeedback(label) {
+  if (!canSubmitFeedback.value || feedbackSaving.value) return
+
+  feedbackSaving.value = true
+  feedbackError.value = null
+
+  try {
+    await saveFeedback({
+      queryPatchId: selectedPatch.value.id,
+      resultPatchId: bestMatch.value.id,
+      label,
+    })
+    lastFeedbackLabel.value = label
+    feedbackSavedAt.value = Date.now()
+  } catch (error) {
+    feedbackError.value = error.message || 'Failed to save feedback.'
+  } finally {
+    feedbackSaving.value = false
+  }
+}
+
 async function loadSimilarForPatch(patch) {
   const path = getPatchPath(patch)
 
@@ -287,13 +366,19 @@ async function loadSimilarForPatch(patch) {
 
   try {
     const results = await fetchSimilarPatches(path, { topK: 4 })
+    const resolvedPatches = await Promise.all(
+      results.map(async (item) => {
+        const patchRecord = await fetchPatchByFileName(item.patch_filename)
+        return {
+          id: patchRecord.id,
+          label: item.patch_filename,
+          score: Math.round(item.similarity_score * 100),
+          imageSrc: getPatchFileUrlByName(item.patch_filename),
+        }
+      })
+    )
 
-    similarPatches.value = results.map((item) => ({
-      id: item.patch_filename,
-      label: item.patch_filename,
-      score: Math.round(item.similarity_score * 100),
-      imageSrc: getPatchFileUrlByName(item.patch_filename),
-    }))
+    similarPatches.value = resolvedPatches
   } catch (error) {
     similarError.value = error.message || 'Failed to load similar patches.'
   } finally {
@@ -308,6 +393,7 @@ async function loadImageFromRoute() {
   selectedPatch.value = null
   similarPatches.value = []
   similarError.value = null
+  clearFeedbackState()
 
   try {
     const data = await fetchImages()
