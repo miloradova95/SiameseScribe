@@ -108,3 +108,44 @@ export async function fetchMyFeedbackForPair({ queryPatchId, resultPatchId }) {
 
   return response.json()
 }
+
+export async function fetchAdminFeedback(filters = {}) {
+  const params = new URLSearchParams()
+
+  if (filters.userId) params.set('user_id', String(filters.userId))
+  if (filters.dateFrom) params.set('date_from', filters.dateFrom)
+  if (filters.dateTo) params.set('date_to', filters.dateTo)
+  if (filters.usedForRetrain !== '' && filters.usedForRetrain !== null && filters.usedForRetrain !== undefined) {
+    params.set('used_for_retrain', String(filters.usedForRetrain))
+  }
+
+  const query = params.toString()
+  const response = await fetchWithAuth(apiUrl(`/feedback/admin${query ? `?${query}` : ''}`))
+  if (!response.ok) {
+    throw new Error(buildErrorMessage('Failed to fetch admin feedback', response))
+  }
+
+  return response.json()
+}
+
+export async function retrainFromFeedback({ feedbackIds, kTriplets = 1 }) {
+  const response = await fetchWithAuth(apiUrl('/feedback/admin/retrain'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      feedback_ids: feedbackIds,
+      k_triplets: kTriplets,
+    }),
+  })
+
+  if (!response.ok) {
+    let message = 'Failed to start retraining'
+    const err = await response.json().catch(() => ({}))
+    if (err?.detail) {
+      message = Array.isArray(err.detail) ? err.detail.join(', ') : err.detail
+    }
+    throw new Error(message)
+  }
+
+  return response.json()
+}

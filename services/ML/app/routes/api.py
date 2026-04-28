@@ -7,7 +7,7 @@ sys.path.append(str(PROJECT_ROOT))
 
 import numpy as np
 import torch
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from PIL import Image
 from torchvision import transforms
 
@@ -237,11 +237,12 @@ def explain_pair(req: ExplainPairRequest, request: Request):
 # ─────────────────────────────────────────────
 
 @router.post("/retrain", response_model=RetrainResponse)
-def retrain(req: RetrainRequest, background_tasks: BackgroundTasks):
+def retrain(req: RetrainRequest):
     feedback_dicts = [f.model_dump() for f in req.feedback]
     triplets_used = count_constructable_triplets(feedback_dicts, req.k_triplets)
 
-    if triplets_used > 0:
-        background_tasks.add_task(finetune, feedback_dicts, req.k_triplets)
+    if triplets_used == 0:
+        return {"status": "skipped", "triplets_used": 0, "run_id": None}
 
-    return {"status": "training_started", "triplets_used": triplets_used}
+    run_id, used_triplets = finetune(feedback_dicts, req.k_triplets)
+    return {"status": "completed", "triplets_used": used_triplets, "run_id": run_id or None}
