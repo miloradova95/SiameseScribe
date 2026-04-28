@@ -1,7 +1,6 @@
 <template>
   <div class="min-h-screen bg-[#f7f3ef] text-[#6c4f3d]">
     <main class="mx-auto max-w-[1860px] px-8 pb-10 pt-8">
-
       <section class="mt-28 border-b border-[#ddd3ca] pb-6">
         <div class="relative flex items-center justify-center">
           <div class="flex items-center gap-5 text-[18px]">
@@ -18,20 +17,15 @@
             </button>
           </div>
 
-          <div class="absolute right-0 flex items-center gap-10 text-[17px] text-[#6c4f3d]">
-            <button class="transition hover:opacity-70">
-              Filter
-            </button>
-            <button class="transition hover:opacity-70">
-              Sorted by
-            </button>
-            <button
-              :disabled="loading || images.length === 0"
-              class="transition hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-40"
+          <div class="absolute right-0 flex items-center gap-10 text-[17px]">
+            <button class="transition hover:opacity-70">Filter</button>
+            <button class="transition hover:opacity-70">Sorted by</button>
+
+            <RandomImageButton
+              :loading="loading"
+              :disabled="images.length === 0"
               @click="loadRandom"
-            >
-              {{ loading ? 'Loading...' : 'Get Random Image' }}
-            </button>
+            />
           </div>
         </div>
       </section>
@@ -44,12 +38,21 @@
       </div>
 
       <section class="mt-10 grid grid-cols-1 gap-10 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <BrowseGrid
-          :images="images"
-          :selected-image-id="selectedImage?.id"
-          :loading="initialLoading"
-          @select="selectImage"
-        />
+        <div>
+          <BrowseGrid
+            :images="paginatedImages"
+            :selected-image-id="selectedImage?.id"
+            :loading="initialLoading"
+            @select="selectImage"
+          />
+
+          <Pagination
+            :current-page="currentPage"
+            :total-pages="totalPages"
+            :page-size="pageSize"
+            @change="goToPage"
+          />     
+        </div>
 
         <BrowseInspector
           :image="selectedImage"
@@ -60,7 +63,7 @@
       </section>
     </main>
 
-      <Teleport to="body">
+    <Teleport to="body">
       <transition
         enter-active-class="transition duration-200 ease-out"
         enter-from-class="opacity-0"
@@ -80,20 +83,7 @@
               class="absolute right-6 top-6 text-white/90 transition hover:opacity-70"
               @click="closeZoom"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-10 w-10"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="1.8"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M6 6l12 12M18 6L6 18"
-                />
-              </svg>
+              ✕
             </button>
 
             <div class="relative flex max-h-full max-w-full items-center justify-center">
@@ -118,7 +108,7 @@
                   class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/90 text-[#5a4032] shadow transition hover:bg-white"
                   @click.stop="zoomOut"
                 >
-                  âˆ’
+                  -
                 </button>
               </div>
             </div>
@@ -130,12 +120,14 @@
 </template>
 
 <script setup>
-import { onMounted, onBeforeUnmount, ref } from 'vue'
-import BrowseGrid from '@/features/browse/BrowseGrid.vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import BrowseGrid from '@/features/browse/components/BrowseGrid.vue'
 import BrowseInspector from '@/features/browse/BrowseInspector.vue'
+import RandomImageButton from '@/components/RandomImageButton.vue'
 import { apiUrl } from '@/lib/api'
 import { fetchImages } from '@/services/image-service'
 import { fetchPatchesByImageId } from '@/services/patch-service'
+import Pagination from '@/features/browse/components/Pagination.vue'
 
 const images = ref([])
 const selectedImage = ref(null)
@@ -145,10 +137,31 @@ const loading = ref(false)
 const patchLoading = ref(false)
 const error = ref(null)
 
+const currentPage = ref(1)
+const pageSize = ref(24)
+
 const zoomOpen = ref(false)
 const zoomLevel = ref(1)
 
 let currentPatchRequestId = 0
+
+const totalPages = computed(() => {
+  return Math.max(1, Math.ceil(images.value.length / pageSize.value))
+})
+
+const paginatedImages = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return images.value.slice(start, start + pageSize.value)
+})
+
+async function goToPage(page) {
+  currentPage.value = Math.min(Math.max(page, 1), totalPages.value)
+
+  if (paginatedImages.value.length > 0) {
+    await selectImage(paginatedImages.value[0])
+  }
+}
+
 
 async function loadAllImages() {
   initialLoading.value = true
@@ -157,9 +170,10 @@ async function loadAllImages() {
   try {
     const data = await fetchImages()
     images.value = Array.isArray(data) ? data : []
+    currentPage.value = 1
 
-    if (images.value.length > 0) {
-      await selectImage(images.value[0])
+    if (paginatedImages.value.length > 0) {
+      await selectImage(paginatedImages.value[0])
     }
   } catch (err) {
     error.value = err.message || 'Etwas ist schiefgelaufen.'
@@ -175,7 +189,9 @@ async function loadPatchesForImage(imageId) {
 
   try {
     const data = await fetchPatchesByImageId(imageId)
+
     if (requestId !== currentPatchRequestId) return
+
     patches.value = Array.isArray(data) ? data.slice(0, 4) : []
   } catch (err) {
     if (requestId !== currentPatchRequestId) return
@@ -189,8 +205,10 @@ async function loadPatchesForImage(imageId) {
 
 async function selectImage(img) {
   if (!img?.id) return
+
   selectedImage.value = img
   error.value = null
+
   await loadPatchesForImage(img.id)
 }
 
@@ -201,17 +219,22 @@ async function loadRandom() {
   error.value = null
 
   try {
-    if (images.value.length === 1) {
-      await selectImage(images.value[0])
-      return
-    }
-
     let randomImage = null
 
-    do {
-      const randomIndex = Math.floor(Math.random() * images.value.length)
-      randomImage = images.value[randomIndex]
-    } while (randomImage.id === selectedImage.value?.id)
+    if (images.value.length === 1) {
+      randomImage = images.value[0]
+    } else {
+      do {
+        const randomIndex = Math.floor(Math.random() * images.value.length)
+        randomImage = images.value[randomIndex]
+      } while (randomImage.id === selectedImage.value?.id)
+    }
+
+    const index = images.value.findIndex((img) => img.id === randomImage.id)
+
+    if (index !== -1) {
+      currentPage.value = Math.floor(index / pageSize.value) + 1
+    }
 
     await selectImage(randomImage)
   } catch (err) {
@@ -223,6 +246,7 @@ async function loadRandom() {
 
 function openZoom() {
   if (!selectedImage.value) return
+
   zoomLevel.value = 1
   zoomOpen.value = true
 }

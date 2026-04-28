@@ -43,18 +43,15 @@
             />
           </div>
 
-          <!-- REMEMBER -->
           <label class="mb-6 flex items-center gap-3 text-[17px]">
             <input type="checkbox" class="h-5 w-5 rounded border-white" />
             Remember me
           </label>
 
-          <!-- ERROR -->
           <p v-if="error" class="mb-4 text-sm text-red-200">
             {{ error }}
           </p>
 
-          <!-- BUTTON -->
           <button
             type="submit"
             :disabled="loading"

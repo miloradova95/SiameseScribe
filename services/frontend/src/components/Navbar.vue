@@ -8,7 +8,7 @@
       peuafleu
     </router-link>
 
-    <div class="flex items-center gap-12 text-[23px]">
+    <div class="flex items-center gap-12 text-[16px]">
       <router-link to="/browse" class="transition hover:text-[#c53114]" active-class="text-[#c53114]">
         Browse
       </router-link>
