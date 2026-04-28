@@ -38,10 +38,10 @@ router.beforeEach(async (to, _from, next) => {
     return next('/login')
   }
   if (to.meta.adminOnly && !authStore.isAdmin) {
-    return next('/browse')
+    return next('/help')
   }
   if (to.path === '/login' && authStore.isLoggedIn) {
-    return next('/browse')
+    return next('/help')
   }
 
   next()

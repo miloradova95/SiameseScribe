@@ -93,7 +93,7 @@ async function submit() {
 
   try {
     await authStore.login(username.value, password.value)
-    router.push('/browse')
+    router.push('/help')
   } catch (e) {
     error.value = e.message
   } finally {
