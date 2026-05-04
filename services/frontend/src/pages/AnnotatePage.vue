@@ -1,5 +1,4 @@
 <template>
-  <div class="min-h-screen bg-[#f7f3ef] text-[#5b4033]">
     <main class="mx-auto w-full max-w-[1560px] px-6 py-6">
       <div v-if="image" class="grid grid-cols-[210px_minmax(0,1fr)] gap-8">
         <AnnotationSidebar
@@ -44,7 +43,7 @@
               </div>
 
               <p class="mt-3 text-center text-sm">
-                {{ bestMatch?.label || 'â€”' }}
+                {{ bestMatch?.label || '-' }}
               </p>
             </div>
 
@@ -58,7 +57,7 @@
                 </div>
 
                 <p class="mt-1 text-[24px]">
-                  {{ bestMatch?.score ?? 'â€”' }}%
+                  {{ bestMatch?.score ?? '-' }}%
                 </p>
               </div>
             </div>
@@ -173,12 +172,6 @@
             </div>
           </div>
         </section>
-
-        <div class="col-span-2 flex justify-end">
-          <button class="rounded-full border border-[#8a6755] px-6 py-3 text-[15px]">
-            Next Pen Flourish â€º
-          </button>
-        </div>
       </div>
 
       <div v-else-if="loading" class="py-20 text-center">
@@ -189,7 +182,6 @@
         Image not found.
       </div>
     </main>
-  </div>
 </template>
 
 <script setup>

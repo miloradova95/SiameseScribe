@@ -30,7 +30,7 @@
 </template>
 
 <script setup>
-import ImageCard from '@/features/browse/components/ImageCard.vue'
+import ImageCard from '@/components/ImageCard.vue'
 
 defineProps({
   images: {
