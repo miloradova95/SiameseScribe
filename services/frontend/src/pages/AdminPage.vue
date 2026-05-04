@@ -1,6 +1,5 @@
 <template>
   <div class="p-8 max-w-6xl mx-auto space-y-10">
-    <section>
       <h1 class="text-2xl font-semibold text-[#2b211d] mb-6">Admin Panel</h1>
 
       <div class="mb-8 p-4 border border-gray-200 rounded">
