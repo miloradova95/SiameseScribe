@@ -8,11 +8,11 @@
 
         <button
           type="button"
-          class="flex items-center gap-2 rounded-full bg-[#5b4034] px-5 py-2 text-sm text-white transition hover:bg-[#c53114]"
+          class="inline-flex h-9 items-center justify-center gap-2.5 whitespace-nowrap rounded-full bg-[#5b4034] px-5 text-sm font-medium text-white transition hover:bg-[#c53114]"
           @click="showCreateUser = true"
         >
-          <span class="text-xl leading-none">+</span>
-          Create Member
+          <PlusIcon />
+          <span class="block leading-none">Create Member</span>
         </button>
       </div>
 
@@ -310,6 +310,7 @@ import { useAuthStore } from '../stores/auth'
 import { fetchWithAuth, apiUrl } from '../lib/api'
 import { formatLocalDateTime, localDateEndToUtcIso, localDateStartToUtcIso } from '../lib/date'
 import { fetchAdminFeedback, retrainFromFeedback } from '../services/patch-service'
+import PlusIcon from '../components/PlusIcon.vue'
 import CreateUserModal from '../features/admin/CreateUserModal.vue'
 
 const activeTab = ref('members')
