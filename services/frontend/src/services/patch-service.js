@@ -69,6 +69,23 @@ export async function fetchSimilarPatches(filePath, options = {}) {
   return (searchData.results ?? []).filter((result) => result.patch_filename !== queryFileName)
 }
 
+export async function fetchExplainPair(queryPatchPath, resultPatchPath) {
+  const response = await fetch(`${ML_API}/explain_pair`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query_patch_path: queryPatchPath, result_patch_path: resultPatchPath }),
+  })
+  if (!response.ok) {
+    throw new Error(buildErrorMessage('Heatmap generation failed', response))
+  }
+  return response.json()
+}
+
+export function getHeatmapFileUrl(relativePath) {
+  const filename = relativePath.split('/').pop()
+  return apiUrl(`/heatmaps/${encodeURIComponent(filename)}`)
+}
+
 export async function saveFeedback({ queryPatchId, resultPatchId, label }) {
   const response = await fetchWithAuth(apiUrl('/feedback'), {
     method: 'POST',
@@ -142,7 +159,11 @@ export async function retrainFromFeedback({ feedbackIds, kTriplets = 1 }) {
     let message = 'Failed to start retraining'
     const err = await response.json().catch(() => ({}))
     if (err?.detail) {
-      message = Array.isArray(err.detail) ? err.detail.join(', ') : err.detail
+      if (Array.isArray(err.detail)) {
+        message = err.detail.map((e) => e.msg ?? String(e)).join('; ')
+      } else {
+        message = err.detail
+      }
     }
     throw new Error(message)
   }

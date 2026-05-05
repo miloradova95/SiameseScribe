@@ -128,7 +128,7 @@ def list_feedback_for_admin(
 def start_retrain_job(
     session: Session,
     feedback_ids: list[int],
-    _k_triplets: int,
+    k_triplets: int,
 ) -> int:
     unique_feedback_ids = list(dict.fromkeys(feedback_ids))
     feedback_items = session.exec(
@@ -145,6 +145,25 @@ def start_retrain_job(
         raise HTTPException(
             status_code=409,
             detail=f"Feedback already in retrain job: {busy_ids}",
+        )
+
+    patches_by_id = _get_patches_by_id(session, feedback_items)
+    payload = [
+        {
+            "query_patch_path": _patch_path_or_404(patches_by_id, feedback.query_patch_id, "query"),
+            "result_patch_path": _patch_path_or_404(patches_by_id, feedback.result_patch_id, "result"),
+            "is_similar": _decode_label(feedback.label) == FeedbackLabel.similar,
+        }
+        for feedback in feedback_items
+    ]
+    if _count_constructable_triplets(payload, k_triplets) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "No triplets can be constructed from the selected feedback. "
+                "Each query patch needs at least one 'similar' result and one "
+                "'not_similar' result among the selected items."
+            ),
         )
 
     for feedback in feedback_items:
@@ -175,14 +194,6 @@ def run_retrain_job(feedback_ids: list[int], k_triplets: int) -> None:
                 }
                 for feedback in feedback_items
             ]
-
-        triplets_used = _count_constructable_triplets(payload, k_triplets)
-        if triplets_used == 0:
-            logger.warning(
-                "Skipping retrain because no constructable triplets were found",
-                extra={"feedback_ids": unique_feedback_ids},
-            )
-            return
 
         response = _post_to_ml_api(
             "/retrain",

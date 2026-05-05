@@ -188,16 +188,12 @@ def explain_pair(req: ExplainPairRequest, request: Request):
     model = request.app.state.model
     device = request.app.state.device
 
-    def _resolve(patch_path: str) -> Path:
-        resolved = Path(patch_path)
-        if not resolved.is_absolute():
-            resolved = PROJECT_ROOT / resolved
-        if not resolved.exists():
-            raise HTTPException(status_code=404, detail=f"Patch not found: {resolved}")
-        return resolved
-
-    query_path = _resolve(req.query_patch_path)
-    result_path = _resolve(req.result_patch_path)
+    query_path = _resolve_path(req.query_patch_path)
+    if not query_path.exists():
+        raise HTTPException(status_code=404, detail=f"Query patch not found: {query_path}")
+    result_path = _resolve_path(req.result_patch_path)
+    if not result_path.exists():
+        raise HTTPException(status_code=404, detail=f"Result patch not found: {result_path}")
 
     query_id = Path(req.query_patch_path).stem
     result_id = Path(req.result_patch_path).stem
