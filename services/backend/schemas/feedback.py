@@ -1,7 +1,9 @@
 from enum import Enum
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from services.backend.schemas._datetime import ensure_utc
 
 
 class FeedbackLabel(str, Enum):
@@ -29,6 +31,11 @@ class FeedbackListItem(BaseModel):
     label: FeedbackLabel
     created_at: datetime
     used_for_retrain: bool
+
+    @field_validator("created_at", mode="before")
+    @classmethod
+    def _normalize_created_at(cls, value: datetime) -> datetime:
+        return ensure_utc(value)
 
 
 class AdminFeedbackListItem(FeedbackListItem):
