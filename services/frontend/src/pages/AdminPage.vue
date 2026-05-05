@@ -110,6 +110,7 @@
             type="number"
             min="1"
             max="5"
+            step="1"
             class="w-full border rounded px-2 py-1 text-sm"
           />
         </div>
@@ -337,7 +338,7 @@ async function startRetrain() {
     const feedbackIds = Array.from(selectedFeedbackIds.value)
     const result = await retrainFromFeedback({
       feedbackIds,
-      kTriplets: Number(kTriplets.value) || 1,
+      kTriplets: Math.round(Number(kTriplets.value)) || 1,
     })
     retrainSuccess.value = `Retrain started for ${result.feedback_count} feedback entr${result.feedback_count === 1 ? 'y' : 'ies'}. Selected rows are marked while the backend job is running and will be released again afterwards.`
     selectedFeedbackIds.value = new Set()
