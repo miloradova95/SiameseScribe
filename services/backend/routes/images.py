@@ -18,15 +18,25 @@ def get_all_images(session: Session = Depends(get_session), _: User = Depends(ge
     return image_service.get_all(session)
 
 
+@router.get("/mine", response_model=list[Image])
+def get_my_images(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    return image_service.get_by_user_id(session, current_user.id)
+
+
 @router.post("/upload", response_model=Image)
 def upload_image(
     file: UploadFile = File(...),
     group: Optional[str] = Form(default=None),
     session: Session = Depends(get_session),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     try:
-        return image_service.save_and_process_upload(session, file=file, group=group)
+        return image_service.save_and_process_upload(
+            session,
+            file=file,
+            group=group,
+            user_id=current_user.id,
+        )
     except image_service.UploadPipelineError as exc:
         raise HTTPException(status_code=502, detail=f"Upload pipeline failed at {exc.step}: {exc.message}") from exc
     except httpx.HTTPStatusError as exc:
