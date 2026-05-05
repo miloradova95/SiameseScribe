@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-[#f7f3ef] text-[#6c4f3d]">
     <main class="mx-auto max-w-[1860px] px-8 pb-10 pt-8">
-      <section class="mt-28 border-b border-[#ddd3ca] pb-6">
+      <section class="mt-6 border-b border-[#ddd3ca] pb-6">
         <div class="relative flex items-center justify-center">
           <div class="flex items-center gap-5 text-[18px]">
             <button class="text-[#c3b7ad] transition hover:text-[#8b6b59]">

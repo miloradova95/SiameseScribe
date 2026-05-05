@@ -19,12 +19,13 @@ const routes = [
   { path: '/browse', name: 'browse', component: BrowsePage, meta: { requiresAuth: true } },
   { path: '/admin', name: 'admin', component: AdminPage, meta: { requiresAuth: true, adminOnly: true } },
   { path: '/help', name: 'help', component: HelpPage, meta: { requiresAuth: true } },
-  { path: '/browse/:fileName', name: 'annotate', component: AnnotatePage, props: true,}
+  { path: '/browse/:fileName', name: 'annotate', component: AnnotatePage, props: true, meta: { requiresAuth: true } },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior: () => ({ top: 0 }),
 })
 
 router.beforeEach(async (to, _from, next) => {

@@ -1,6 +1,17 @@
 <template>
-    <main class="mx-auto w-full max-w-[1560px] px-6 py-6">
-      <div v-if="image" class="grid grid-cols-[210px_minmax(0,1fr)] gap-8">
+  <div class="min-h-screen bg-[#f7f3ef] text-[#6c4f3d]">
+    <main class="mx-auto max-w-[1560px] px-8 pb-10 pt-8">
+      <section class="mt-6 border-b border-[#ddd3ca] pb-6">
+        <div class="flex items-center gap-3 text-[18px]">
+          <button class="text-[#c3b7ad] transition hover:text-[#8b6b59]" @click="router.push('/browse')">
+            Browse
+          </button>
+          <span class="text-[#d0c5bc]">/</span>
+          <span class="font-medium text-[#6c4f3d]">{{ displayTitle || 'Annotate' }}</span>
+        </div>
+        <h1 class="mt-4 text-[28px] font-semibold text-[#6c4f3d]">Most similar patches</h1>
+      </section>
+      <div v-if="image" class="mt-6 grid grid-cols-[210px_minmax(0,1fr)] gap-8">
         <AnnotationSidebar
           :image="image"
           :image-src="mainImageSrc"
@@ -48,7 +59,7 @@
             </div>
 
             <div class="pt-8">
-              <div class="mb-8">
+              <div class="mb-6">
                 <div class="flex items-center gap-2 text-[14px] font-semibold">
                   <span>Similarity Score</span>
                   <span class="flex h-5 w-5 items-center justify-center rounded-full border border-[#6c4f3d] text-xs">
@@ -59,6 +70,49 @@
                 <p class="mt-1 text-[24px]">
                   {{ bestMatch?.score ?? '-' }}%
                 </p>
+              </div>
+
+              <div class="border-t border-[#d8cec5] pt-5">
+                <p class="mb-2 text-[13px] font-semibold">Navigate Patches</p>
+                <p class="mb-3 text-[12px] text-[#7f6a5c]">
+                  {{ patches.length ? `${selectedPatchIndex + 1} / ${patches.length}` : '—' }}
+                </p>
+
+                <div class="mb-3 flex gap-2">
+                  <button
+                    class="flex-1 rounded-full border border-[#8a6755] bg-[#8a6755] px-3 py-1.5 text-sm font-bold text-white transition hover:bg-[#6c4f3d] hover:border-[#6c4f3d] disabled:border-[#c8baae] disabled:bg-[#c8baae]"
+                    :disabled="!patches.length"
+                    @click="goToPrevPatch"
+                  >
+                    ← Prev
+                  </button>
+                  <button
+                    class="flex-1 rounded-full border border-[#8a6755] bg-[#8a6755] px-3 py-1.5 text-sm font-bold text-white transition hover:bg-[#6c4f3d] hover:border-[#6c4f3d] disabled:border-[#c8baae] disabled:bg-[#c8baae]"
+                    :disabled="!patches.length"
+                    @click="goToNextPatch"
+                  >
+                    Next →
+                  </button>
+                </div>
+
+                <div class="flex gap-2">
+                  <input
+                    v-model="jumpToId"
+                    type="number"
+                    min="1"
+                    :max="patches.length"
+                    placeholder="Patch #"
+                    class="w-0 flex-1 rounded-full border border-[#c8baae] bg-white px-3 py-1.5 text-sm text-[#5b4033] placeholder-[#b49f91] outline-none focus:border-[#8a6755]"
+                    @keydown.enter="jumpToPatch"
+                  />
+                  <button
+                    class="rounded-full border border-[#8a6755] bg-[#8a6755] px-4 py-1.5 text-sm font-bold text-white transition hover:bg-[#6c4f3d] hover:border-[#6c4f3d] disabled:border-[#c8baae] disabled:bg-[#c8baae]"
+                    :disabled="!patches.length"
+                    @click="jumpToPatch"
+                  >
+                    Go
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -182,6 +236,7 @@
         Image not found.
       </div>
     </main>
+  </div>
 </template>
 
 <script setup>
@@ -218,6 +273,7 @@ const feedbackError = ref(null)
 const lastFeedbackLabel = ref(null)
 const feedbackSavedAt = ref(0)
 const feedbackByPair = ref({})
+const jumpToId = ref('')
 
 const fileName = computed(() => route.params.fileName)
 
@@ -243,6 +299,11 @@ const selectedPatchLabel = computed(() => {
 })
 
 const bestMatch = computed(() => similarPatches.value[0] || null)
+
+const selectedPatchIndex = computed(() => {
+  if (!selectedPatch.value || !patches.value.length) return -1
+  return patches.value.findIndex(p => p.id === selectedPatch.value.id)
+})
 const canSubmitFeedback = computed(() => Boolean(selectedPatch.value?.id && bestMatch.value?.id))
 const feedbackStatusText = computed(() => {
   if (feedbackSaving.value) return 'Saving feedback...'
@@ -282,6 +343,27 @@ async function selectPatch(patch) {
   selectedPatch.value = patch
   clearFeedbackState()
   await loadSimilarForPatch(patch)
+}
+
+function goToNextPatch() {
+  if (!patches.value.length) return
+  const idx = selectedPatchIndex.value
+  const next = idx < patches.value.length - 1 ? idx + 1 : 0
+  selectPatch(patches.value[next])
+}
+
+function goToPrevPatch() {
+  if (!patches.value.length) return
+  const idx = selectedPatchIndex.value
+  const prev = idx > 0 ? idx - 1 : patches.value.length - 1
+  selectPatch(patches.value[prev])
+}
+
+function jumpToPatch() {
+  const num = parseInt(jumpToId.value, 10)
+  if (isNaN(num) || num < 1 || num > patches.value.length) return
+  selectPatch(patches.value[num - 1])
+  jumpToId.value = ''
 }
 
 function getPatchPath(patch) {
