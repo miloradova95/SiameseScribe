@@ -37,7 +37,7 @@
         {{ error }}
       </div>
 
-      <section class="mt-10 grid grid-cols-1 gap-10 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <section class="mt-10 grid grid-cols-1 items-start gap-10 xl:grid-cols-[minmax(0,1fr)_420px]">
         <div>
           <BrowseGrid
             :images="paginatedImages"
