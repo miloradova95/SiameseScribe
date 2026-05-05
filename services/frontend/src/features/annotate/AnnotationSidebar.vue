@@ -1,7 +1,12 @@
 <template>
   <aside>
     <div class="mb-5 flex items-center justify-between">
-      <button class="text-[28px]" @click="$emit('back')">←</button>
+      <button
+        class="rounded-lg bg-[#8a6755] px-3 py-1 text-sm font-bold text-white transition hover:bg-[#6c4f3d]"
+        @click="$emit('back')"
+      >
+        ← Back
+      </button>
       <span class="text-[17px]">Browse</span>
       <BookmarkButton :item="image" />
     </div>
