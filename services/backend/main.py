@@ -56,9 +56,11 @@ PATCHES_DIR = PROJECT_ROOT / "data" / "patches"
 @app.on_event("startup")
 def startup():
     SQLModel.metadata.create_all(engine)
+    _migrate_images_user_id()
     _seed_images()
     _seed_patches()
     _seed_admin()
+    _backfill_known_uploaded_image()
 
 def _seed_images():
     with Session(engine) as session:
@@ -84,6 +86,17 @@ def _seed_images():
                         ))
         session.add_all(images)
         session.commit()
+
+
+def _migrate_images_user_id():
+    with engine.begin() as connection:
+        columns = connection.execute(text("PRAGMA table_info(images)")).fetchall()
+        column_names = {column[1] for column in columns}
+
+        if "userId" not in column_names:
+            connection.execute(text('ALTER TABLE images ADD COLUMN "userId" INTEGER'))
+
+        connection.execute(text('CREATE INDEX IF NOT EXISTS "ix_images_userId" ON images ("userId")'))
 
 
 def _seed_patches():
@@ -132,6 +145,13 @@ def _seed_admin():
         session.add(admin)
         session.commit()
         print(f"[startup] Admin user '{username}' created.")
+
+
+def _backfill_known_uploaded_image():
+    with engine.begin() as connection:
+        connection.execute(
+            text('UPDATE images SET "userId" = 1 WHERE id = 789 AND "userId" IS NULL')
+        )
 
 
 app.include_router(auth_router)

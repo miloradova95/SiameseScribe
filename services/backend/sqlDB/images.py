@@ -14,4 +14,5 @@ class Image(SQLModel, table=True):
     fileName: str = Field(..., description="Original file name of the uploaded image")
     filePath: str = Field(..., description="Absolute path: /data/dataset/preprocessed/")
     group: Optional[str] = Field(default=None, description="Optional group identifier for categorization")
+    userId: Optional[int] = Field(default=None, foreign_key="users.id", index=True)
     patches: Optional[List[int]] = Field(default=None, sa_column=Column(JSON))
