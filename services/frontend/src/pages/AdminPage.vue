@@ -191,6 +191,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { fetchWithAuth, apiUrl } from '../lib/api'
+import { formatLocalDateTime, localDateEndToUtcIso, localDateStartToUtcIso } from '../lib/date'
 import { fetchAdminFeedback, retrainFromFeedback } from '../services/patch-service'
 
 const authStore = useAuthStore()
@@ -265,10 +266,10 @@ function buildFeedbackFilters() {
   }
 
   if (feedbackFilters.value.dateFrom) {
-    filters.dateFrom = `${feedbackFilters.value.dateFrom}T00:00:00Z`
+    filters.dateFrom = localDateStartToUtcIso(feedbackFilters.value.dateFrom)
   }
   if (feedbackFilters.value.dateTo) {
-    filters.dateTo = `${feedbackFilters.value.dateTo}T23:59:59Z`
+    filters.dateTo = localDateEndToUtcIso(feedbackFilters.value.dateTo)
   }
 
   return filters
@@ -351,7 +352,7 @@ async function startRetrain() {
 }
 
 function formatFeedbackDate(value) {
-  return new Date(value).toLocaleString()
+  return formatLocalDateTime(value)
 }
 
 onMounted(async () => {

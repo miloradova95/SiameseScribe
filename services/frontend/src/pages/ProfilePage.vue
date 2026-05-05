@@ -134,6 +134,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import ImageCard from '@/components/ImageCard.vue'
 import { apiUrl } from '@/lib/api'
+import { formatLocalDateTime } from '@/lib/date'
 import { fetchMyFeedback } from '@/services/patch-service'
 
 const router = useRouter()
@@ -166,7 +167,7 @@ function getPatchImageUrl(patchId) {
 }
 
 function formatFeedbackDate(value) {
-  return new Date(value).toLocaleString()
+  return formatLocalDateTime(value)
 }
 
 async function loadFeedback() {
