@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select, or_
+from sqlalchemy import func
 
 from services.backend.routes.deps import get_session, require_admin
 from services.backend.schemas.auth import UserCreate, UserResponse
@@ -15,8 +16,14 @@ def create_user(
     session: Session = Depends(get_session),
     _: User = Depends(require_admin),
 ):
+    normalized_username = user_data.username.lower()
     existing = session.exec(
-        select(User).where(or_(User.username == user_data.username, User.email == user_data.email))
+        select(User).where(
+            or_(
+                func.lower(User.username) == normalized_username,
+                User.email == user_data.email,
+            )
+        )
     ).first()
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username or email already exists")
