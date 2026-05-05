@@ -30,6 +30,10 @@ def get_all(session: Session) -> list[Image]:
     return session.exec(select(Image)).all()
 
 
+def get_by_user_id(session: Session, user_id: int) -> list[Image]:
+    return session.exec(select(Image).where(Image.userId == user_id)).all()
+
+
 def get_by_id(session: Session, image_id: int) -> Image | None:
     return session.get(Image, image_id)
 
@@ -46,15 +50,21 @@ def get_random(session: Session) -> Image | None:
     return session.get(Image, _random.choice(all_ids))
 
 
-def create(session: Session, file_name: str, file_path: str, group: str | None = None) -> Image:
-    image = Image(fileName=file_name, filePath=file_path, group=group)
+def create(
+    session: Session,
+    file_name: str,
+    file_path: str,
+    group: str | None = None,
+    user_id: int | None = None,
+) -> Image:
+    image = Image(fileName=file_name, filePath=file_path, group=group, userId=user_id)
     session.add(image)
     session.commit()
     session.refresh(image)
     return image
 
 
-def save_upload(session: Session, file: UploadFile, group: str | None = None) -> Image:
+def save_upload(session: Session, file: UploadFile, group: str | None = None, user_id: int | None = None) -> Image:
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     extension = os.path.splitext(file.filename or "")[1]
     unique_name = f"{uuid.uuid4().hex}{extension}"
@@ -64,6 +74,7 @@ def save_upload(session: Session, file: UploadFile, group: str | None = None) ->
         extra={
             "original_filename": file.filename,
             "group": group,
+            "user_id": user_id,
             "target_path": file_path,
         },
     )
@@ -71,12 +82,13 @@ def save_upload(session: Session, file: UploadFile, group: str | None = None) ->
     with open(file_path, "wb") as destination:
         shutil.copyfileobj(file.file, destination)
 
-    image = create(session, file_name=file.filename, file_path=file_path, group=group)
+    image = create(session, file_name=file.filename, file_path=file_path, group=group, user_id=user_id)
     logger.info(
         "Upload saved",
         extra={
             "image_id": image.id,
             "original_filename": file.filename,
+            "user_id": image.userId,
             "stored_path": file_path,
         },
     )
@@ -335,16 +347,21 @@ def upload_new_embeddings(patches: list[Patch], embeddings: list[dict]) -> None:
     )
 
 
-def save_and_process_upload(session: Session, file: UploadFile, group: str | None = None) -> Image:
+def save_and_process_upload(
+    session: Session,
+    file: UploadFile,
+    group: str | None = None,
+    user_id: int | None = None,
+) -> Image:
     # Step 1: record the start of the full upload pipeline for this file.
     logger.info(
         "Starting upload pipeline",
-        extra={"original_filename": file.filename, "group": group},
+        extra={"original_filename": file.filename, "group": group, "user_id": user_id},
     )
 
     try:
         # Step 2: store the uploaded image file and create its database row.
-        image = save_upload(session, file=file, group=group)
+        image = save_upload(session, file=file, group=group, user_id=user_id)
         logger.info("Upload pipeline saved image", extra={"image_id": image.id})
 
         # Step 3: segment the image and persist the generated patch rows.

@@ -204,7 +204,7 @@
               >
                 <div class="overflow-hidden rounded-[8px] bg-[#ebe3db]">
                   <img
-                    :src="patch.imageSrc"
+                    :src="heatmapOn && patch.heatmapSrc ? patch.heatmapSrc : patch.imageSrc"
                     :alt="patch.label"
                     class="h-[190px] w-full object-cover"
                     @error="handleImageError"
@@ -253,6 +253,8 @@ import {
   fetchPatchesByImageId,
   patchName,
   saveFeedback,
+  fetchExplainPair,
+  getHeatmapFileUrl,
 } from '@/services/patch-service'
 
 const route = useRoute()
@@ -504,17 +506,40 @@ async function loadSimilarForPatch(patch) {
           label: item.patch_filename,
           score: Math.round(item.similarity_score * 100),
           imageSrc: getPatchFileUrlByName(item.patch_filename),
+          filePath: patchRecord.file_path,
+          heatmapSrc: null,
         }
       })
     )
 
     similarPatches.value = resolvedPatches
     await loadExistingFeedbackForCurrentPair()
+    loadHeatmapsInBackground(path, resolvedPatches)
   } catch (error) {
     similarError.value = error.message || 'Failed to load similar patches.'
   } finally {
     similarLoading.value = false
   }
+}
+
+function loadHeatmapsInBackground(queryPath, patches) {
+  patches.forEach(async (patch) => {
+    if (!patch.filePath) return
+    try {
+      const data = await fetchExplainPair(queryPath, patch.filePath)
+      const heatmapSrc = getHeatmapFileUrl(data.heatmaps.result)
+      const idx = similarPatches.value.findIndex((p) => p.id === patch.id)
+      if (idx !== -1) {
+        similarPatches.value = [
+          ...similarPatches.value.slice(0, idx),
+          { ...similarPatches.value[idx], heatmapSrc },
+          ...similarPatches.value.slice(idx + 1),
+        ]
+      }
+    } catch {
+      // heatmap generation is non-critical — silently skip
+    }
+  })
 }
 
 async function loadImageFromRoute() {

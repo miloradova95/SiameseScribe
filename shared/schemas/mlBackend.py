@@ -107,5 +107,6 @@ class RetrainRequest(BaseModel):
 
 
 class RetrainResponse(BaseModel):
-    status: Literal["training_started"]
+    status: Literal["completed", "skipped"]
     triplets_used: int
+    run_id: str | None = None
