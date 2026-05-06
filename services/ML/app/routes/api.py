@@ -7,7 +7,7 @@ sys.path.append(str(PROJECT_ROOT))
 
 import numpy as np
 import torch
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from PIL import Image
 from torchvision import transforms
 
@@ -188,16 +188,12 @@ def explain_pair(req: ExplainPairRequest, request: Request):
     model = request.app.state.model
     device = request.app.state.device
 
-    def _resolve(patch_path: str) -> Path:
-        resolved = Path(patch_path)
-        if not resolved.is_absolute():
-            resolved = PROJECT_ROOT / resolved
-        if not resolved.exists():
-            raise HTTPException(status_code=404, detail=f"Patch not found: {resolved}")
-        return resolved
-
-    query_path = _resolve(req.query_patch_path)
-    result_path = _resolve(req.result_patch_path)
+    query_path = _resolve_path(req.query_patch_path)
+    if not query_path.exists():
+        raise HTTPException(status_code=404, detail=f"Query patch not found: {query_path}")
+    result_path = _resolve_path(req.result_patch_path)
+    if not result_path.exists():
+        raise HTTPException(status_code=404, detail=f"Result patch not found: {result_path}")
 
     query_id = Path(req.query_patch_path).stem
     result_id = Path(req.result_patch_path).stem
@@ -237,11 +233,12 @@ def explain_pair(req: ExplainPairRequest, request: Request):
 # ─────────────────────────────────────────────
 
 @router.post("/retrain", response_model=RetrainResponse)
-def retrain(req: RetrainRequest, background_tasks: BackgroundTasks):
+def retrain(req: RetrainRequest):
     feedback_dicts = [f.model_dump() for f in req.feedback]
     triplets_used = count_constructable_triplets(feedback_dicts, req.k_triplets)
 
-    if triplets_used > 0:
-        background_tasks.add_task(finetune, feedback_dicts, req.k_triplets)
+    if triplets_used == 0:
+        return {"status": "skipped", "triplets_used": 0, "run_id": None}
 
-    return {"status": "training_started", "triplets_used": triplets_used}
+    run_id, used_triplets = finetune(feedback_dicts, req.k_triplets)
+    return {"status": "completed", "triplets_used": used_triplets, "run_id": run_id or None}

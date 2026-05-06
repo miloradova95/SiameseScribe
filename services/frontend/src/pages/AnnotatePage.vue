@@ -1,6 +1,17 @@
 <template>
-    <main class="mx-auto w-full max-w-[1560px] px-6 py-6">
-      <div v-if="image" class="grid grid-cols-[210px_minmax(0,1fr)] gap-8">
+  <div class="min-h-screen bg-[#f7f3ef] text-[#6c4f3d]">
+    <main class="mx-auto max-w-[1560px] px-8 pb-10 pt-8">
+      <section class="mt-6 border-b border-[#ddd3ca] pb-6">
+        <div class="flex items-center gap-3 text-[18px]">
+          <button class="text-[#c3b7ad] transition hover:text-[#8b6b59]" @click="router.push('/browse')">
+            Browse
+          </button>
+          <span class="text-[#d0c5bc]">/</span>
+          <span class="font-medium text-[#6c4f3d]">{{ displayTitle || 'Annotate' }}</span>
+        </div>
+        <h1 class="mt-4 text-[28px] font-semibold text-[#6c4f3d]">Most similar patches</h1>
+      </section>
+      <div v-if="image" class="mt-6 grid grid-cols-[210px_minmax(0,1fr)] gap-8">
         <AnnotationSidebar
           :image="image"
           :image-src="mainImageSrc"
@@ -48,7 +59,7 @@
             </div>
 
             <div class="pt-8">
-              <div class="mb-8">
+              <div class="mb-6">
                 <div class="flex items-center gap-2 text-[14px] font-semibold">
                   <span>Similarity Score</span>
                   <span class="flex h-5 w-5 items-center justify-center rounded-full border border-[#6c4f3d] text-xs">
@@ -59,6 +70,49 @@
                 <p class="mt-1 text-[24px]">
                   {{ bestMatch?.score ?? '-' }}%
                 </p>
+              </div>
+
+              <div class="border-t border-[#d8cec5] pt-5">
+                <p class="mb-2 text-[13px] font-semibold">Navigate Patches</p>
+                <p class="mb-3 text-[12px] text-[#7f6a5c]">
+                  {{ patches.length ? `${selectedPatchIndex + 1} / ${patches.length}` : '—' }}
+                </p>
+
+                <div class="mb-3 flex gap-2">
+                  <button
+                    class="flex-1 rounded-full border border-[#8a6755] bg-[#8a6755] px-3 py-1.5 text-sm font-bold text-white transition hover:bg-[#6c4f3d] hover:border-[#6c4f3d] disabled:border-[#c8baae] disabled:bg-[#c8baae]"
+                    :disabled="!patches.length"
+                    @click="goToPrevPatch"
+                  >
+                    ← Prev
+                  </button>
+                  <button
+                    class="flex-1 rounded-full border border-[#8a6755] bg-[#8a6755] px-3 py-1.5 text-sm font-bold text-white transition hover:bg-[#6c4f3d] hover:border-[#6c4f3d] disabled:border-[#c8baae] disabled:bg-[#c8baae]"
+                    :disabled="!patches.length"
+                    @click="goToNextPatch"
+                  >
+                    Next →
+                  </button>
+                </div>
+
+                <div class="flex gap-2">
+                  <input
+                    v-model="jumpToId"
+                    type="number"
+                    min="1"
+                    :max="patches.length"
+                    placeholder="Patch #"
+                    class="w-0 flex-1 rounded-full border border-[#c8baae] bg-white px-3 py-1.5 text-sm text-[#5b4033] placeholder-[#b49f91] outline-none focus:border-[#8a6755]"
+                    @keydown.enter="jumpToPatch"
+                  />
+                  <button
+                    class="rounded-full border border-[#8a6755] bg-[#8a6755] px-4 py-1.5 text-sm font-bold text-white transition hover:bg-[#6c4f3d] hover:border-[#6c4f3d] disabled:border-[#c8baae] disabled:bg-[#c8baae]"
+                    :disabled="!patches.length"
+                    @click="jumpToPatch"
+                  >
+                    Go
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -74,21 +128,38 @@
                 </div>
 
                 <div class="flex gap-3">
-                  <button class="rounded-full border border-[#8a6755] px-5 py-2 text-sm hover:bg-[#eee7e2]">
+                  <button
+                    class="rounded-full border px-5 py-2 text-sm transition"
+                    :class="feedbackButtonClass('similar')"
+                    :disabled="feedbackSaving || !canSubmitFeedback"
+                    @click="submitFeedback('similar')"
+                  >
                     Similar
                   </button>
-                  <button class="rounded-full border border-[#8a6755] px-5 py-2 text-sm hover:bg-[#eee7e2]">
+                  <button
+                    class="rounded-full border px-5 py-2 text-sm transition"
+                    :class="feedbackButtonClass('not_similar')"
+                    :disabled="feedbackSaving || !canSubmitFeedback"
+                    @click="submitFeedback('not_similar')"
+                  >
                     Not Similar
                   </button>
-                  <button class="rounded-full border border-[#8a6755] px-5 py-2 text-sm hover:bg-[#eee7e2]">
+                  <button
+                    class="rounded-full border border-[#8a6755] px-5 py-2 text-sm"
+                    :disabled="feedbackSaving"
+                    @click="clearFeedbackState"
+                  >
                     Uncertain
                   </button>
                 </div>
               </div>
 
-              <button class="rounded-full bg-[#6c4f3d] px-7 py-2 text-white">
-                Submit
-              </button>
+              <p
+                class="text-sm"
+                :class="feedbackError ? 'text-red-700' : 'text-[#7f6a5c]'"
+              >
+                {{ feedbackStatusText }}
+              </p>
             </div>
           </div>
 
@@ -133,7 +204,7 @@
               >
                 <div class="overflow-hidden rounded-[8px] bg-[#ebe3db]">
                   <img
-                    :src="patch.imageSrc"
+                    :src="heatmapOn && patch.heatmapSrc ? patch.heatmapSrc : patch.imageSrc"
                     :alt="patch.label"
                     class="h-[190px] w-full object-cover"
                     @error="handleImageError"
@@ -165,6 +236,7 @@
         Image not found.
       </div>
     </main>
+  </div>
 </template>
 
 <script setup>
@@ -175,9 +247,14 @@ import { apiUrl } from '@/lib/api'
 import { fetchImages } from '@/services/image-service'
 import {
   fetchSimilarPatches,
+  fetchPatchByFileName,
+  fetchMyFeedbackForPair,
   getPatchFileUrlByName,
   fetchPatchesByImageId,
   patchName,
+  saveFeedback,
+  fetchExplainPair,
+  getHeatmapFileUrl,
 } from '@/services/patch-service'
 
 const route = useRoute()
@@ -193,6 +270,12 @@ const selectedPatch = ref(null)
 const similarPatches = ref([])
 const similarLoading = ref(false)
 const similarError = ref(null)
+const feedbackSaving = ref(false)
+const feedbackError = ref(null)
+const lastFeedbackLabel = ref(null)
+const feedbackSavedAt = ref(0)
+const feedbackByPair = ref({})
+const jumpToId = ref('')
 
 const fileName = computed(() => route.params.fileName)
 
@@ -219,6 +302,23 @@ const selectedPatchLabel = computed(() => {
 
 const bestMatch = computed(() => similarPatches.value[0] || null)
 
+const selectedPatchIndex = computed(() => {
+  if (!selectedPatch.value || !patches.value.length) return -1
+  return patches.value.findIndex(p => p.id === selectedPatch.value.id)
+})
+const canSubmitFeedback = computed(() => Boolean(selectedPatch.value?.id && bestMatch.value?.id))
+const feedbackStatusText = computed(() => {
+  if (feedbackSaving.value) return 'Saving feedback...'
+  if (feedbackError.value) return feedbackError.value
+  if (lastFeedbackLabel.value && feedbackSavedAt.value) {
+    return lastFeedbackLabel.value === 'similar'
+      ? 'Saved as similar for this patch pair.'
+      : 'Saved as not similar for this patch pair.'
+  }
+  if (!canSubmitFeedback.value) return 'Select a patch with a valid best match to save feedback.'
+  return 'Click Similar or Not Similar to save feedback.'
+})
+
 const mainImageSrc = computed(() => {
   if (!image.value?.id) return fallbackImage
   return apiUrl(`/images/${image.value.id}/file`)
@@ -243,7 +343,29 @@ const selectedPatchImage = computed(() => {
 
 async function selectPatch(patch) {
   selectedPatch.value = patch
+  clearFeedbackState()
   await loadSimilarForPatch(patch)
+}
+
+function goToNextPatch() {
+  if (!patches.value.length) return
+  const idx = selectedPatchIndex.value
+  const next = idx < patches.value.length - 1 ? idx + 1 : 0
+  selectPatch(patches.value[next])
+}
+
+function goToPrevPatch() {
+  if (!patches.value.length) return
+  const idx = selectedPatchIndex.value
+  const prev = idx > 0 ? idx - 1 : patches.value.length - 1
+  selectPatch(patches.value[prev])
+}
+
+function jumpToPatch() {
+  const num = parseInt(jumpToId.value, 10)
+  if (isNaN(num) || num < 1 || num > patches.value.length) return
+  selectPatch(patches.value[num - 1])
+  jumpToId.value = ''
 }
 
 function getPatchPath(patch) {
@@ -264,6 +386,103 @@ function handleImageError(event) {
   event.target.src = fallbackImage
 }
 
+function clearFeedbackState() {
+  feedbackSaving.value = false
+  feedbackError.value = null
+  lastFeedbackLabel.value = null
+  feedbackSavedAt.value = 0
+}
+
+function currentFeedbackKey() {
+  if (!selectedPatch.value?.id || !bestMatch.value?.id) return null
+  return `${selectedPatch.value.id}:${bestMatch.value.id}`
+}
+
+function applyFeedbackState(feedback) {
+  lastFeedbackLabel.value = feedback?.label ?? null
+  feedbackSavedAt.value = feedback ? Date.parse(feedback.created_at) || Date.now() : 0
+}
+
+function feedbackButtonClass(label) {
+  const isActive = lastFeedbackLabel.value === label && feedbackSavedAt.value
+  const isDisabled = feedbackSaving.value || !canSubmitFeedback.value
+
+  if (isActive) {
+    return 'border-[#6c4f3d] bg-[#6c4f3d] text-white'
+  }
+
+  if (isDisabled) {
+    return 'border-[#c8baae] text-[#b49f91]'
+  }
+
+  return 'border-[#8a6755] text-[#5b4033] hover:bg-[#f0e7e0]'
+}
+
+async function submitFeedback(label) {
+  if (!canSubmitFeedback.value || feedbackSaving.value) return
+
+  feedbackSaving.value = true
+  feedbackError.value = null
+
+  try {
+    await saveFeedback({
+      queryPatchId: selectedPatch.value.id,
+      resultPatchId: bestMatch.value.id,
+      label,
+    })
+    const key = currentFeedbackKey()
+    const savedFeedback = {
+      query_patch_id: selectedPatch.value.id,
+      result_patch_id: bestMatch.value.id,
+      label,
+      created_at: new Date().toISOString(),
+    }
+
+    if (key) {
+      feedbackByPair.value = {
+        ...feedbackByPair.value,
+        [key]: savedFeedback,
+      }
+    }
+
+    applyFeedbackState(savedFeedback)
+  } catch (error) {
+    feedbackError.value = error.message || 'Failed to save feedback.'
+  } finally {
+    feedbackSaving.value = false
+  }
+}
+
+async function loadExistingFeedbackForCurrentPair() {
+  const key = currentFeedbackKey()
+
+  if (!key) {
+    applyFeedbackState(null)
+    return
+  }
+
+  if (Object.prototype.hasOwnProperty.call(feedbackByPair.value, key)) {
+    applyFeedbackState(feedbackByPair.value[key])
+    return
+  }
+
+  try {
+    const feedback = await fetchMyFeedbackForPair({
+      queryPatchId: selectedPatch.value.id,
+      resultPatchId: bestMatch.value.id,
+    })
+
+    feedbackByPair.value = {
+      ...feedbackByPair.value,
+      [key]: feedback,
+    }
+    feedbackError.value = null
+    applyFeedbackState(feedback)
+  } catch (error) {
+    feedbackError.value = error.message || 'Failed to load existing feedback.'
+  }
+}
+
 async function loadSimilarForPatch(patch) {
   const path = getPatchPath(patch)
 
@@ -279,18 +498,48 @@ async function loadSimilarForPatch(patch) {
 
   try {
     const results = await fetchSimilarPatches(path, { topK: 4 })
+    const resolvedPatches = await Promise.all(
+      results.map(async (item) => {
+        const patchRecord = await fetchPatchByFileName(item.patch_filename)
+        return {
+          id: patchRecord.id,
+          label: item.patch_filename,
+          score: Math.round(item.similarity_score * 100),
+          imageSrc: getPatchFileUrlByName(item.patch_filename),
+          filePath: patchRecord.file_path,
+          heatmapSrc: null,
+        }
+      })
+    )
 
-    similarPatches.value = results.map((item) => ({
-      id: item.patch_filename,
-      label: item.patch_filename,
-      score: Math.round(item.similarity_score * 100),
-      imageSrc: getPatchFileUrlByName(item.patch_filename),
-    }))
+    similarPatches.value = resolvedPatches
+    await loadExistingFeedbackForCurrentPair()
+    loadHeatmapsInBackground(path, resolvedPatches)
   } catch (error) {
     similarError.value = error.message || 'Failed to load similar patches.'
   } finally {
     similarLoading.value = false
   }
+}
+
+function loadHeatmapsInBackground(queryPath, patches) {
+  patches.forEach(async (patch) => {
+    if (!patch.filePath) return
+    try {
+      const data = await fetchExplainPair(queryPath, patch.filePath)
+      const heatmapSrc = getHeatmapFileUrl(data.heatmaps.result)
+      const idx = similarPatches.value.findIndex((p) => p.id === patch.id)
+      if (idx !== -1) {
+        similarPatches.value = [
+          ...similarPatches.value.slice(0, idx),
+          { ...similarPatches.value[idx], heatmapSrc },
+          ...similarPatches.value.slice(idx + 1),
+        ]
+      }
+    } catch {
+      // heatmap generation is non-critical — silently skip
+    }
+  })
 }
 
 async function loadImageFromRoute() {
@@ -300,6 +549,7 @@ async function loadImageFromRoute() {
   selectedPatch.value = null
   similarPatches.value = []
   similarError.value = null
+  clearFeedbackState()
 
   try {
     const data = await fetchImages()

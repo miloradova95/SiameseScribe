@@ -1,5 +1,7 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime
+
+from services.backend.schemas._datetime import ensure_utc
 
 
 class LoginRequest(BaseModel):
@@ -26,3 +28,8 @@ class UserResponse(BaseModel):
     role: str
     is_active: bool
     created_at: datetime
+
+    @field_validator("created_at", mode="before")
+    @classmethod
+    def _normalize_created_at(cls, value: datetime) -> datetime:
+        return ensure_utc(value)

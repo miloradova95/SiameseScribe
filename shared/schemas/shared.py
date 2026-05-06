@@ -19,3 +19,5 @@ class BoundingBox(BaseModel):
         if len(bbox) != 4:
             raise ValueError("BoundingBox list must have exactly 4 elements")
         return cls(x=bbox[0], y=bbox[1], width=bbox[2], height=bbox[3])
+    
+    

@@ -1,17 +1,17 @@
 <template>
   <aside
-    class="h-fit rounded-[32px] border border-[#ddd3ca] bg-[#fcfaf8] p-7 shadow-[0_4px_20px_rgba(80,55,35,0.04)]"
+    class="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto rounded-[32px] border border-[#ddd3ca] bg-[#fcfaf8] p-7 shadow-[0_4px_20px_rgba(80,55,35,0.04)]"
   >
     <template v-if="image">
       <div class="overflow-hidden rounded-[28px] bg-[#ebe3db]">
         <img
           :src="apiUrl(`/images/${image.id}/file`)"
           :alt="image.fileName"
-          class="h-[620px] w-full object-cover"
+          class="h-[28vh] w-full object-cover"
         />
       </div>
 
-      <div class="mt-8 space-y-7">
+      <div class="mt-4 space-y-4">
         <div>
           <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#a08d80]">
             Name
@@ -47,7 +47,7 @@
         </div>
       </div>
 
-      <div class="mt-8 border-t border-[#e2d8cf] pt-6">
+      <div class="mt-4 border-t border-[#e2d8cf] pt-4">
         <div class="flex items-center justify-between gap-4">
          <button
             type="button"

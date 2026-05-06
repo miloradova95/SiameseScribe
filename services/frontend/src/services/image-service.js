@@ -18,6 +18,15 @@ export async function fetchImages() {
   return response.json()
 }
 
+export async function fetchMyImages() {
+  const response = await fetchWithAuth(apiUrl('/images/mine'))
+  if (!response.ok) {
+    throw new Error(buildErrorMessage('Failed to fetch your uploads', response))
+  }
+
+  return response.json()
+}
+
 export async function fetchRandomImage() {
   const response = await fetchWithAuth(apiUrl('/images/random'))
   if (!response.ok) {
