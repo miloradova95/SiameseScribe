@@ -1,0 +1,58 @@
+services:
+  # ── Main backend (REST API + SQLite) ────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: services/backend/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      SECRET_KEY: ${SECRET_KEY:-changeme_in_production}
+      # Comma-separated list of extra CORS origins added at runtime
+      ALLOWED_ORIGINS: "http://localhost,http://localhost:80,http://127.0.0.1"
+    restart: unless-stopped
+
+  # ── ML service (Siamese network · ChromaDB · segmentation) ──────────────────
+  ml:
+    build:
+      context: .
+      dockerfile: services/ML/Dockerfile
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      CHROMA_COLLECTION: ${CHROMA_COLLECTION:-patches_v1}
+    restart: unless-stopped
+
+  # ── Lightweight API gateway (user management + ML proxy) ────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      # Points to the ml service inside the Docker network
+      ML_SERVICE_URL: "http://ml:8000"
+    depends_on:
+      - ml
+    restart: unless-stopped
+
+  # ── Vue 3 frontend (built with Vite, served by nginx) ───────────────────────
+  frontend:
+    build:
+      context: services/frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
