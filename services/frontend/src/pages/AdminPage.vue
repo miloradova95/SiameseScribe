@@ -6,11 +6,9 @@
           Admin
         </h1>
 
-        <button
-          type="button"
+        <button type="button"
           class="inline-flex h-9 items-center justify-center gap-2.5 whitespace-nowrap rounded-full bg-[#5b4034] px-5 text-sm font-medium text-white transition hover:bg-[#c53114]"
-          @click="showCreateUser = true"
-        >
+          @click="showCreateUser = true">
           <PlusIcon />
           <span class="block leading-none">Create Member</span>
         </button>
@@ -34,25 +32,15 @@
       </div>
 
       <div class="mb-4 flex gap-8 border-b border-[#ded2ca]">
-        <button
-          type="button"
-          class="pb-3 text-sm font-semibold"
-          :class="activeTab === 'members'
-            ? 'border-b-2 border-[#5b4034] text-[#5b4034]'
-            : 'text-[#9a867c]'"
-          @click="activeTab = 'members'"
-        >
+        <button type="button" class="pb-3 text-sm font-semibold" :class="activeTab === 'members'
+          ? 'border-b-2 border-[#5b4034] text-[#5b4034]'
+          : 'text-[#9a867c]'" @click="activeTab = 'members'">
           Members
         </button>
 
-        <button
-          type="button"
-          class="pb-3 text-sm font-semibold"
-          :class="activeTab === 'feedback'
-            ? 'border-b-2 border-[#5b4034] text-[#5b4034]'
-            : 'text-[#9a867c]'"
-          @click="activeTab = 'feedback'"
-        >
+        <button type="button" class="pb-3 text-sm font-semibold" :class="activeTab === 'feedback'
+          ? 'border-b-2 border-[#5b4034] text-[#5b4034]'
+          : 'text-[#9a867c]'" @click="activeTab = 'feedback'">
           Feedback Retraining
           <span class="ml-1 rounded-full bg-[#ead8b9] px-2 py-0.5 text-xs text-[#a7441d]">
             {{ feedbackItems.length }}
@@ -61,86 +49,64 @@
       </div>
 
       <section v-if="activeTab === 'members'">
-        <div class="grid grid-cols-[1.5fr_0.8fr_0.8fr_1.2fr] border-b border-[#e5d8d1] px-3 py-4 text-xs font-semibold text-[#9a867c]">
+        <div
+          class="grid grid-cols-[1.5fr_0.8fr_0.8fr_1.2fr] border-b border-[#e5d8d1] px-3 py-4 text-xs font-semibold text-[#9a867c]">
           <div>User</div>
           <div>Status</div>
           <div>Role</div>
           <div></div>
         </div>
 
-        <div
-      
-<div
-  v-for="u in users"
-  :key="u.id"
-  class="grid grid-cols-[1.5fr_0.8fr_0.8fr_1.2fr] items-center border-b px-3 py-5 transition"
-  :class="u.id === authStore.user?.id
-    ? 'bg-[#fff7ed] border-[#e3b5a8]'
-    : 'border-[#e3b5a8]'"
->
-        
+        <div v-for="u in users" :key="u.id"
+          class="grid grid-cols-[1.5fr_0.8fr_0.8fr_1.2fr] items-center border-b px-3 py-5 transition" :class="u.id === authStore.user?.id
+            ? 'bg-[#fff7ed] border-[#e3b5a8]'
+            : 'border-[#e3b5a8]'">
+
           <div class="flex items-center gap-4">
-            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-[#e7f2ff] text-sm font-bold text-[#1976d2]">
+            <div
+              class="flex h-10 w-10 items-center justify-center rounded-full bg-[#e7f2ff] text-sm font-bold text-[#1976d2]">
               {{ u.username?.slice(0, 2).toUpperCase() }}
             </div>
 
             <div>
-              
+
               <div class="font-semibold text-[#5b4034]">{{ u.username }}</div>
               <div class="text-sm text-[#9a867c]">{{ u.email }}</div>
             </div>
           </div>
 
           <div>
-<span
-  class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold"
-  :class="u.is_active
-    ? 'bg-[#dff5e3] text-[#2e7d32] ring-1 ring-[#2e7d32]/20'
-    : 'bg-[#f1e8e2] text-[#9a867c]'"
->
-  <span
-    class="h-2 w-2 rounded-full"
-    :class="u.is_active ? 'bg-[#2e7d32]' : 'bg-[#9a867c]'"
-  ></span>
+            <span class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold" :class="u.is_active
+              ? 'bg-[#dff5e3] text-[#2e7d32] ring-1 ring-[#2e7d32]/20'
+              : 'bg-[#f1e8e2] text-[#9a867c]'">
+              <span class="h-2 w-2 rounded-full" :class="u.is_active ? 'bg-[#2e7d32]' : 'bg-[#9a867c]'"></span>
 
-  {{ u.is_active ? 'Active' : 'Deactivated' }}
-</span>
+              {{ u.is_active ? 'Active' : 'Deactivated' }}
+            </span>
           </div>
 
           <div class="text-sm text-[#5b4034]">{{ u.role }}</div>
 
           <div class="flex gap-4">
-            <button
-              v-if="u.is_active && u.id !== authStore.user?.id"
-              @click="deactivate(u.id)"
-              class="rounded-full border border-[#bba79d] px-4 py-1.5 text-sm text-[#5b4034] hover:bg-[#f1e8e2]"
-            >
+            <button v-if="u.is_active && u.id !== authStore.user?.id" @click="deactivate(u.id)"
+              class="rounded-full border border-[#bba79d] px-4 py-1.5 text-sm text-[#5b4034] hover:bg-[#f1e8e2]">
               Deactivate
             </button>
 
-            <button
-              v-else-if="!u.is_active"
-              @click="activate(u.id)"
-              class="rounded-full border border-[#91b875] px-4 py-1.5 text-sm text-[#3f7b22] hover:bg-[#e3f1d8]"
-            >
+            <button v-else-if="!u.is_active" @click="activate(u.id)"
+              class="rounded-full border border-[#91b875] px-4 py-1.5 text-sm text-[#3f7b22] hover:bg-[#e3f1d8]">
               Activate
             </button>
 
-            <span
-              v-else
-              class="rounded-full border border-[#91b875] px-4 py-1.5 text-sm text-[#3f7b22]"
-            >
+            <span v-else class="rounded-full border border-[#91b875] px-4 py-1.5 text-sm text-[#3f7b22]">
               Current User
             </span>
 
-              <button
-    v-if="u.id !== authStore.user?.id"
-    @click="deleteUser(u.id)"
-    class="rounded-full border border-[#e3b5a8] px-4 py-1.5 text-sm text-[#c53114] hover:bg-[#f8e4df]"
-  >
-    Delete
-  </button>
-            
+            <button v-if="u.id !== authStore.user?.id" @click="deleteUser(u.id)"
+              class="rounded-full border border-[#e3b5a8] px-4 py-1.5 text-sm text-[#c53114] hover:bg-[#f8e4df]">
+              Delete
+            </button>
+
           </div>
         </div>
 
@@ -150,81 +116,46 @@
       </section>
 
       <section v-if="activeTab === 'feedback'" class="space-y-6">
-        <form
-          @submit.prevent="loadAdminFeedback"
-          class="grid gap-4 rounded-2xl bg-white/70 p-5 md:grid-cols-5"
-        >
-          <select
-            v-model="feedbackFilters.userId"
-            class="rounded-lg border border-[#d8c9c0] px-3 py-2 text-sm"
-          >
+        <form @submit.prevent="loadAdminFeedback" class="grid gap-4 rounded-2xl bg-white/70 p-5 md:grid-cols-5">
+          <select v-model="feedbackFilters.userId" class="rounded-lg border border-[#d8c9c0] px-3 py-2 text-sm">
             <option value="">All users</option>
             <option v-for="u in users" :key="u.id" :value="String(u.id)">
               {{ u.username }} (#{{ u.id }})
             </option>
           </select>
 
-          <input
-            v-model="feedbackFilters.dateFrom"
-            type="date"
-            class="rounded-lg border border-[#d8c9c0] px-3 py-2 text-sm"
-          />
+          <input v-model="feedbackFilters.dateFrom" type="date"
+            class="rounded-lg border border-[#d8c9c0] px-3 py-2 text-sm" />
 
-          <input
-            v-model="feedbackFilters.dateTo"
-            type="date"
-            class="rounded-lg border border-[#d8c9c0] px-3 py-2 text-sm"
-          />
+          <input v-model="feedbackFilters.dateTo" type="date"
+            class="rounded-lg border border-[#d8c9c0] px-3 py-2 text-sm" />
 
-          <select
-            v-model="feedbackFilters.usedForRetrain"
-            class="rounded-lg border border-[#d8c9c0] px-3 py-2 text-sm"
-          >
+          <select v-model="feedbackFilters.usedForRetrain" class="rounded-lg border border-[#d8c9c0] px-3 py-2 text-sm">
             <option value="">All</option>
             <option value="false">Available</option>
             <option value="true">Currently used</option>
           </select>
 
-          <input
-            v-model.number="kTriplets"
-            type="number"
-            min="1"
-            max="5"
-            step="1"
-            class="rounded-lg border border-[#d8c9c0] px-3 py-2 text-sm"
-          />
+          <input v-model.number="kTriplets" type="number" min="1" max="5" step="1"
+            class="rounded-lg border border-[#d8c9c0] px-3 py-2 text-sm" />
 
           <div class="md:col-span-5 flex flex-wrap gap-3">
-            <button
-              type="submit"
-              class="rounded-full bg-[#5b4034] px-5 py-2 text-sm text-white hover:bg-[#c53114]"
-            >
+            <button type="submit" class="rounded-full bg-[#5b4034] px-5 py-2 text-sm text-white hover:bg-[#c53114]">
               Apply Filters
             </button>
 
-            <button
-              type="button"
-              class="rounded-full border border-[#bba79d] px-5 py-2 text-sm"
-              @click="resetFeedbackFilters"
-            >
+            <button type="button" class="rounded-full border border-[#bba79d] px-5 py-2 text-sm"
+              @click="resetFeedbackFilters">
               Reset
             </button>
 
-            <button
-              type="button"
-              class="rounded-full border border-[#bba79d] px-5 py-2 text-sm disabled:opacity-40"
-              @click="toggleSelectAllVisible"
-              :disabled="!feedbackItems.length"
-            >
+            <button type="button" class="rounded-full border border-[#bba79d] px-5 py-2 text-sm disabled:opacity-40"
+              @click="toggleSelectAllVisible" :disabled="!feedbackItems.length">
               {{ allVisibleSelected ? 'Clear Visible' : 'Select Visible' }}
             </button>
 
-            <button
-              type="button"
-              class="rounded-full bg-[#c53114] px-5 py-2 text-sm text-white disabled:opacity-40"
-              @click="startRetrain"
-              :disabled="retrainLoading || !selectedCount"
-            >
+            <button type="button" class="rounded-full bg-[#c53114] px-5 py-2 text-sm text-white disabled:opacity-40"
+              @click="startRetrain" :disabled="retrainLoading || !selectedCount">
               {{ retrainLoading ? 'Starting...' : 'Start Retrain' }}
             </button>
           </div>
@@ -250,18 +181,10 @@
             </thead>
 
             <tbody>
-              <tr
-                v-for="item in feedbackItems"
-                :key="item.id"
-                class="border-b border-[#eee5df] align-top"
-              >
+              <tr v-for="item in feedbackItems" :key="item.id" class="border-b border-[#eee5df] align-top">
                 <td class="px-3 py-4">
-                  <input
-                    :checked="selectedFeedbackIds.has(item.id)"
-                    :disabled="item.used_for_retrain"
-                    type="checkbox"
-                    @change="toggleFeedbackSelection(item.id)"
-                  />
+                  <input :checked="selectedFeedbackIds.has(item.id)" :disabled="item.used_for_retrain" type="checkbox"
+                    @change="toggleFeedbackSelection(item.id)" />
                 </td>
 
                 <td class="whitespace-nowrap px-3 py-4">
@@ -296,11 +219,7 @@
       </section>
     </div>
 
-    <CreateUserModal
-      :open="showCreateUser"
-      @close="showCreateUser = false"
-      @create="handleCreateUser"
-    />
+    <CreateUserModal :open="showCreateUser" @close="showCreateUser = false" @create="handleCreateUser" />
   </div>
 </template>
 
