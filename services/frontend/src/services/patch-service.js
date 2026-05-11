@@ -37,7 +37,7 @@ export async function fetchPatchesByImageId(imageId) {
 }
 
 export async function fetchSimilarPatches(filePath, options = {}) {
-  const { topK = 8 } = options
+  const { topK = 8, sourceImageId = null } = options
 
   const embedResponse = await fetch(`${ML_API}/embed_patches`, {
     method: 'POST',
@@ -54,10 +54,15 @@ export async function fetchSimilarPatches(filePath, options = {}) {
     throw new Error('No embedding returned')
   }
 
+  const searchBody = { embedding: vector, top_k: topK }
+  if (sourceImageId != null) {
+    searchBody.exclude_source_image_id = sourceImageId
+  }
+
   const searchResponse = await fetch(`${ML_API}/search_patches`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ embedding: vector, top_k: topK }),
+    body: JSON.stringify(searchBody),
   })
   if (!searchResponse.ok) {
     throw new Error(buildErrorMessage('Search failed', searchResponse))

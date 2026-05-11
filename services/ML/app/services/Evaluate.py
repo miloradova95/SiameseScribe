@@ -76,7 +76,7 @@ def _embed_batched(model, patch_paths: list[Path], device: str) -> torch.Tensor:
 # Mode 1: Full eval — ChromaDB-backed
 # ─────────────────────────────────────────────
 
-def evaluate_full(collection, model, device: str, top_k: int = 5, mlflow_run_id: str = None) -> dict:
+def evaluate_full(collection, model, device: str, top_k: int = 5, mlflow_run_id: str = None, exclude_same_image: bool = True) -> dict:
     """
     Query every test patch against ChromaDB and compute P@K + mAP.
     Requires Embedd.py to have been run with the current model weights.
@@ -94,17 +94,21 @@ def evaluate_full(collection, model, device: str, top_k: int = 5, mlflow_run_id:
 
     query_embs = _embed_batched(model, patch_paths, device)  # (N, 128)
     groups = df["group"].tolist()
+    source_image_ids = df["source_image_id"].tolist()
 
     precisions, aps, per_query = [], [], []
 
-    print(f"Querying ChromaDB (top_k={top_k}) for {len(patch_paths)} test patches...")
-    for i, (emb, true_group, fname) in enumerate(
-        tqdm(zip(query_embs, groups, df["patch_filename"]), total=len(patch_paths), desc="Evaluating")
+    print(f"Querying ChromaDB (top_k={top_k}, exclude_same_image={exclude_same_image}) for {len(patch_paths)} test patches...")
+    for i, (emb, true_group, fname, src_img_id) in enumerate(
+        tqdm(zip(query_embs, groups, df["patch_filename"], source_image_ids), total=len(patch_paths), desc="Evaluating")
     ):
+        where = {"source_image_id": {"$ne": int(src_img_id)}} if exclude_same_image else None
+
         results = collection.query(
             query_embeddings=[emb.tolist()],
             n_results=top_k,
             include=["metadatas"],
+            **({"where": where} if where else {}),
         )
         retrieved_groups = [m["group"] for m in results["metadatas"][0]]
 
@@ -121,6 +125,7 @@ def evaluate_full(collection, model, device: str, top_k: int = 5, mlflow_run_id:
         "precision_at_k": round(mean_p, 6),
         "mAP": round(mean_ap, 6),
         "top_k": top_k,
+        "exclude_same_image": exclude_same_image,
         "num_samples": len(patch_paths),
         "per_query": per_query,
     }
@@ -260,6 +265,8 @@ def main():
     parser.add_argument("--top_k",      type=int, default=5)
     parser.add_argument("--mlflow_run_id", type=str, default=None,
                         help="Parent MLflow run ID — eval metrics will be logged as a child run")
+    parser.add_argument("--no_exclude_same_image", action="store_true",
+                        help="Include patches from the same source image in results (off by default)")
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -278,6 +285,7 @@ def main():
         collection, model, device,
         top_k=args.top_k,
         mlflow_run_id=args.mlflow_run_id,
+        exclude_same_image=not args.no_exclude_same_image,
     )
 
     print(f"\n=== Evaluation Results ===")

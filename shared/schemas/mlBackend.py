@@ -53,6 +53,7 @@ class EmbedPatchesResponse(BaseModel):
 class SearchPatchesRequest(BaseModel):
     embedding: Embedding128
     top_k: int = Field(4, ge=1, le=20)
+    exclude_source_image_id: int | None = None
 
 
 class SearchResultItem(BaseModel):

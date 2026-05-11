@@ -162,10 +162,14 @@ def search_patches(req: SearchPatchesRequest, request: Request):
     if collection is None:
         raise HTTPException(status_code=503, detail="ChromaDB collection not loaded — run Embedd.py first")
 
+    where = {"source_image_id": {"$ne": req.exclude_source_image_id}} \
+        if req.exclude_source_image_id is not None else None
+
     results = collection.query(
         query_embeddings=[req.embedding],
         n_results=req.top_k,
         include=["distances"],
+        **({"where": where} if where else {}),
     )
 
     ids = results["ids"][0]

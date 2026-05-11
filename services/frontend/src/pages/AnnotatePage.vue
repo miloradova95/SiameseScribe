@@ -497,7 +497,7 @@ async function loadSimilarForPatch(patch) {
   similarPatches.value = []
 
   try {
-    const results = await fetchSimilarPatches(path, { topK: 4 })
+    const results = await fetchSimilarPatches(path, { topK: 4, sourceImageId: patch.source_image_id })
     const resolvedPatches = await Promise.all(
       results.map(async (item) => {
         const patchRecord = await fetchPatchByFileName(item.patch_filename)
