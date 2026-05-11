@@ -19,3 +19,7 @@ class FinetuneRun(SQLModel, table=True):
     mlflow_run_id: Optional[str] = Field(default=None)
     feedback_ids: str = Field(default="[]")     # JSON-encoded list[int]
     error_msg: Optional[str] = Field(default=None)
+    reembedding_started_at: Optional[datetime] = Field(default=None)
+    reembedding_completed_at: Optional[datetime] = Field(default=None)
+    eval_precision_at_k: Optional[float] = Field(default=None)
+    eval_mAP: Optional[float] = Field(default=None)

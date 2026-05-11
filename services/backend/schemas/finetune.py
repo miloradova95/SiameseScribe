@@ -19,6 +19,10 @@ class FinetuneRunItem(BaseModel):
     mlflow_run_id: Optional[str]
     feedback_count: int
     error_msg: Optional[str]
+    reembedding_started_at: Optional[datetime]
+    reembedding_completed_at: Optional[datetime]
+    eval_precision_at_k: Optional[float]
+    eval_mAP: Optional[float]
 
     @field_validator("triggered_at", "started_at", "completed_at", mode="before")
     @classmethod

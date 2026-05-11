@@ -59,4 +59,8 @@ def _to_item(run: FinetuneRun) -> FinetuneRunItem:
         mlflow_run_id=run.mlflow_run_id,
         feedback_count=feedback_count,
         error_msg=run.error_msg,
+        reembedding_started_at=run.reembedding_started_at,
+        reembedding_completed_at=run.reembedding_completed_at,
+        eval_precision_at_k=run.eval_precision_at_k,
+        eval_mAP=run.eval_mAP,
     )

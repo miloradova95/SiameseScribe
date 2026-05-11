@@ -171,3 +171,12 @@ export async function fetchFinetuneRuns(limit = 50) {
   }
   return response.json()
 }
+
+export async function fetchReembedStatus() {
+  const ML_API = import.meta.env.VITE_ML_API_URL ?? 'http://localhost:8001'
+  const response = await fetch(`${ML_API}/reembed_status`)
+  if (!response.ok) {
+    throw new Error(`Failed to fetch re-embed status (${response.status})`)
+  }
+  return response.json()
+}

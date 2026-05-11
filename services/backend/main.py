@@ -46,6 +46,7 @@ async def lifespan(app: FastAPI):
     # ── startup ──────────────────────────────
     SQLModel.metadata.create_all(engine)
     _migrate_images_user_id()
+    _migrate_finetune_runs()
     _seed_images()
     _seed_patches()
     _seed_admin()
@@ -168,6 +169,20 @@ def _seed_admin():
         print(f"[startup] Admin user '{username}' created.")
 
 
+def _migrate_finetune_runs():
+    new_columns = {
+        "reembedding_started_at":   "DATETIME",
+        "reembedding_completed_at": "DATETIME",
+        "eval_precision_at_k":      "REAL",
+        "eval_mAP":                 "REAL",
+    }
+    with engine.begin() as conn:
+        existing = {row[1] for row in conn.execute(text("PRAGMA table_info(finetune_runs)")).fetchall()}
+        for col, col_type in new_columns.items():
+            if col not in existing:
+                conn.execute(text(f'ALTER TABLE finetune_runs ADD COLUMN "{col}" {col_type}'))
+
+
 def _backfill_known_uploaded_image():
     with engine.begin() as connection:
         connection.execute(
@@ -197,7 +212,7 @@ def _finetune_scheduler_tick() -> None:
 
 
 async def _finetune_scheduler_loop() -> None:
-    interval = int(os.getenv("FINETUNE_INTERVAL_MINUTES", "15")) * 60
+    interval = int(os.getenv("FINETUNE_INTERVAL_MINUTES", "10080")) * 60  # default 1 week
     logger.info("Finetune scheduler started (interval=%ds)", interval)
     while True:
         await asyncio.sleep(interval)

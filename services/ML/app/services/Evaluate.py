@@ -76,13 +76,21 @@ def _embed_batched(model, patch_paths: list[Path], device: str) -> torch.Tensor:
 # Mode 1: Full eval — ChromaDB-backed
 # ─────────────────────────────────────────────
 
-def evaluate_full(collection, model, device: str, top_k: int = 5, mlflow_run_id: str = None, exclude_same_image: bool = True) -> dict:
+def evaluate_full(collection, model, device: str, top_k: int = 5, mlflow_run_id: str = None, exclude_same_image: bool = True, max_samples: int | None = None) -> dict:
     """
-    Query every test patch against ChromaDB and compute P@K + mAP.
-    Requires Embedd.py to have been run with the current model weights.
-    Test embeddings are computed in-memory and discarded after evaluation.
+    Query test patches against ChromaDB and compute P@K + mAP.
+    max_samples: if set, randomly sample that many patches from the test set (stratified by group).
     """
     df = pd.read_csv(METADATA_TEST)
+
+    if max_samples is not None and max_samples < len(df):
+        n_groups = df["group"].nunique()
+        per_group = max(1, max_samples // n_groups)
+        df = (
+            df.groupby("group", group_keys=False)
+            .apply(lambda g: g.sample(min(per_group, len(g)), random_state=42))
+            .reset_index(drop=True)
+        )
 
     # Resolve patch paths — try test dir first, fall back to train dir
     patch_paths = []
@@ -127,6 +135,7 @@ def evaluate_full(collection, model, device: str, top_k: int = 5, mlflow_run_id:
         "top_k": top_k,
         "exclude_same_image": exclude_same_image,
         "num_samples": len(patch_paths),
+        "sampled": max_samples is not None,
         "per_query": per_query,
     }
 
@@ -267,6 +276,8 @@ def main():
                         help="Parent MLflow run ID — eval metrics will be logged as a child run")
     parser.add_argument("--no_exclude_same_image", action="store_true",
                         help="Include patches from the same source image in results (off by default)")
+    parser.add_argument("--max_samples", type=int, default=None,
+                        help="Randomly sample N patches from the test set (stratified by group). Default: use all.")
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -286,6 +297,7 @@ def main():
         top_k=args.top_k,
         mlflow_run_id=args.mlflow_run_id,
         exclude_same_image=not args.no_exclude_same_image,
+        max_samples=args.max_samples,
     )
 
     print(f"\n=== Evaluation Results ===")

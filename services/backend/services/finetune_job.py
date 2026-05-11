@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import time
 from datetime import datetime, timezone
 
 import httpx
@@ -12,6 +13,8 @@ from services.backend.sqlDB.feedback import Feedback
 from services.backend.sqlDB.finetune_run import FinetuneRun
 from services.backend.sqlDB.patches import Patch
 from services.ML.app.services.Finetune import count_samples
+
+ML_API_URL = os.getenv("ML_API_URL", "http://127.0.0.1:8001").rstrip("/")
 
 logger = logging.getLogger(__name__)
 
@@ -65,9 +68,11 @@ def evaluate_and_trigger(session: Session, trigger_source: str = "auto") -> int 
     The caller is responsible for dispatching run_automated_finetune_job(run_id)
     in a background thread.
     """
-    # 1. Don't start if a run is already pending or running
+    # 1. Don't start if a run is already active in any in-progress state
     active = session.exec(
-        select(FinetuneRun).where(FinetuneRun.status.in_(["pending", "running"]))
+        select(FinetuneRun).where(
+            FinetuneRun.status.in_(["pending", "running", "reembedding", "evaluating"])
+        )
     ).first()
     if active:
         logger.debug("Finetune skipped: run %d is already %s", active.id, active.status)
@@ -176,27 +181,97 @@ def run_automated_finetune_job(run_id: int) -> None:
         )
         result = response.json()
 
+        mlflow_run_id = result.get("run_id")
+
+        with Session(engine) as session:
+            run = session.get(FinetuneRun, run_id)
+            run.status = "reembedding"
+            run.mlflow_run_id = mlflow_run_id
+            run.triplets_used = result.get("triplets_used", 0)
+            run.t_real = result.get("t_real", run.t_real)
+            run.t_aug  = result.get("t_aug",  run.t_aug)
+            run.p_pos  = result.get("p_pos",  run.p_pos)
+            run.reembedding_started_at = _now()
+            session.add(run)
+            session.commit()
+
+        logger.info("Finetune run %d: ML training done, reloading model", run_id)
+        _reload_model()
+
+        logger.info("Finetune run %d: starting re-embedding", run_id)
+        _start_reembed(mlflow_run_id)
+
+        # Poll until re-embedding + eval completes (max 4 hours)
+        eval_precision, eval_map = _poll_reembed_status(run_id, timeout_secs=4 * 3600)
+
         with Session(engine) as session:
             run = session.get(FinetuneRun, run_id)
             run.status = "completed"
             run.completed_at = _now()
-            run.mlflow_run_id = result.get("run_id")
-            run.triplets_used = result.get("triplets_used", 0)
-            # ML response now returns sample breakdown — update if present
-            run.t_real = result.get("t_real", run.t_real)
-            run.t_aug  = result.get("t_aug",  run.t_aug)
-            run.p_pos  = result.get("p_pos",  run.p_pos)
+            run.reembedding_completed_at = _now()
+            run.eval_precision_at_k = eval_precision
+            run.eval_mAP = eval_map
             session.add(run)
             session.commit()
 
         logger.info(
-            "Finetune run %d: completed (mlflow=%s, triplets=%d)",
-            run_id, result.get("run_id"), result.get("triplets_used", 0),
+            "Finetune run %d: completed (mlflow=%s, triplets=%d, P@5=%.4f, mAP=%.4f)",
+            run_id, mlflow_run_id, result.get("triplets_used", 0),
+            eval_precision or 0, eval_map or 0,
         )
 
     except (httpx.HTTPError, Exception) as exc:
         logger.exception("Finetune run %d: failed — %s", run_id, exc)
         _mark_failed(run_id, feedback_ids, str(exc)[:500])
+
+
+def _reload_model() -> None:
+    try:
+        with httpx.Client(timeout=30.0) as client:
+            r = client.post(f"{ML_API_URL}/reload_model")
+            r.raise_for_status()
+        logger.info("Model weights reloaded in ML service")
+    except Exception:
+        logger.exception("Failed to reload model weights — ML service may be using stale weights")
+
+
+def _start_reembed(mlflow_run_id: str | None) -> None:
+    try:
+        with httpx.Client(timeout=30.0) as client:
+            r = client.post(
+                f"{ML_API_URL}/reembed_all",
+                json={"mlflow_run_id": mlflow_run_id},
+            )
+            if r.status_code == 409:
+                # Another re-embedding is already running — piggyback on it by polling
+                logger.warning("Re-embedding already in progress in ML service; will poll existing run")
+                return
+            r.raise_for_status()
+        logger.info("Re-embedding started in ML service")
+    except httpx.HTTPStatusError:
+        logger.exception("Failed to start re-embedding")
+        raise
+
+
+def _poll_reembed_status(run_id: int, timeout_secs: int = 14400) -> tuple[float | None, float | None]:
+    """Poll GET /reembed_status until in_progress=False. Returns (precision_at_k, mAP)."""
+    poll_interval = 30
+    elapsed = 0
+    while elapsed < timeout_secs:
+        time.sleep(poll_interval)
+        elapsed += poll_interval
+        try:
+            with httpx.Client(timeout=15.0) as client:
+                r = client.get(f"{ML_API_URL}/reembed_status")
+                r.raise_for_status()
+                status = r.json()
+            if not status.get("in_progress", True):
+                return status.get("eval_precision_at_k"), status.get("eval_mAP")
+            logger.debug("Finetune run %d: re-embedding still in progress (%ds elapsed)", run_id, elapsed)
+        except Exception:
+            logger.exception("Error polling reembed_status for run %d", run_id)
+    logger.warning("Finetune run %d: re-embedding polling timed out after %ds", run_id, timeout_secs)
+    return None, None
 
 
 def _mark_failed(run_id: int, feedback_ids: list[int], error_msg: str) -> None:
