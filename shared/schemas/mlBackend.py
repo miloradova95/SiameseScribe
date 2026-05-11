@@ -111,3 +111,6 @@ class RetrainResponse(BaseModel):
     status: Literal["completed", "skipped"]
     triplets_used: int
     run_id: str | None = None
+    t_real: int = 0
+    t_aug: int = 0
+    p_pos: int = 0

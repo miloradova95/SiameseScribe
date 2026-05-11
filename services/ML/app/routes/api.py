@@ -11,7 +11,7 @@ from fastapi import APIRouter, HTTPException, Request
 from PIL import Image
 from torchvision import transforms
 
-from services.ML.app.services.Finetune import count_constructable_triplets, finetune
+from services.ML.app.services.Finetune import count_samples, finetune
 from services.ML.app.services.HeatmapUtil import save_heatmap_overlay
 from services.ML.app.services.segment import extract_patches
 from shared.schemas.mlBackend import (
@@ -239,10 +239,24 @@ def explain_pair(req: ExplainPairRequest, request: Request):
 @router.post("/retrain", response_model=RetrainResponse)
 def retrain(req: RetrainRequest):
     feedback_dicts = [f.model_dump() for f in req.feedback]
-    triplets_used = count_constructable_triplets(feedback_dicts, req.k_triplets)
+    samples = count_samples(feedback_dicts)
 
-    if triplets_used == 0:
-        return {"status": "skipped", "triplets_used": 0, "run_id": None}
+    if not samples["can_finetune"]:
+        return {
+            "status": "skipped",
+            "triplets_used": 0,
+            "run_id": None,
+            "t_real": samples["t_real"],
+            "t_aug": samples["t_aug"],
+            "p_pos": samples["p_pos"],
+        }
 
-    run_id, used_triplets = finetune(feedback_dicts, req.k_triplets)
-    return {"status": "completed", "triplets_used": used_triplets, "run_id": run_id or None}
+    result = finetune(feedback_dicts, req.k_triplets)
+    return {
+        "status": "completed",
+        "triplets_used": result["triplets_used"],
+        "run_id": result["run_id"] or None,
+        "t_real": result["t_real"],
+        "t_aug": result["t_aug"],
+        "p_pos": result["p_pos"],
+    }

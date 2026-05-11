@@ -150,28 +150,24 @@ export async function fetchAdminFeedback(filters = {}) {
   return response.json()
 }
 
-export async function retrainFromFeedback({ feedbackIds, kTriplets = 1 }) {
-  const response = await fetchWithAuth(apiUrl('/feedback/admin/retrain'), {
+// retrainFromFeedback() was removed. Finetuning is now triggered automatically
+// by the backend scheduler, or manually via triggerFinetuneRun() below.
+
+export async function triggerFinetuneRun() {
+  const response = await fetchWithAuth(apiUrl('/admin/finetune-runs/trigger'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      feedback_ids: feedbackIds,
-      k_triplets: kTriplets,
-    }),
   })
-
   if (!response.ok) {
-    let message = 'Failed to start retraining'
     const err = await response.json().catch(() => ({}))
-    if (err?.detail) {
-      if (Array.isArray(err.detail)) {
-        message = err.detail.map((e) => e.msg ?? String(e)).join('; ')
-      } else {
-        message = err.detail
-      }
-    }
-    throw new Error(message)
+    throw new Error(err?.detail ?? `Trigger failed (${response.status})`)
   }
+  return response.json()
+}
 
+export async function fetchFinetuneRuns(limit = 50) {
+  const response = await fetchWithAuth(apiUrl(`/admin/finetune-runs?limit=${limit}`))
+  if (!response.ok) {
+    throw new Error(`Failed to load finetune runs (${response.status})`)
+  }
   return response.json()
 }

@@ -53,7 +53,7 @@
             : 'text-[#9a867c]'"
           @click="activeTab = 'feedback'"
         >
-          Feedback Retraining
+          Model Finetuning
           <span class="ml-1 rounded-full bg-[#ead8b9] px-2 py-0.5 text-xs text-[#a7441d]">
             {{ feedbackItems.length }}
           </span>
@@ -150,149 +150,190 @@
       </section>
 
       <section v-if="activeTab === 'feedback'" class="space-y-6">
-        <form
-          @submit.prevent="loadAdminFeedback"
-          class="grid gap-4 rounded-2xl bg-white/70 p-5 md:grid-cols-5"
-        >
-          <select
-            v-model="feedbackFilters.userId"
-            class="rounded-lg border border-[#d8c9c0] px-3 py-2 text-sm"
+
+        <!-- Info banner -->
+        <div class="rounded-2xl bg-[#ead8b9]/60 px-5 py-4 text-sm text-[#5b4034] space-y-1">
+          <p class="font-semibold">Finetuning runs automatically.</p>
+          <p class="text-[#8a756b]">
+            The scheduler checks for new unused feedback every 15 minutes and starts a run
+            when at least one anchor patch has a "not similar" label. Use
+            <span class="font-medium">Trigger Now</span> to run an immediate check without waiting.
+            All runs are logged in the table below.
+          </p>
+        </div>
+
+        <!-- Manual trigger -->
+        <div class="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            class="rounded-full bg-[#c53114] px-5 py-2 text-sm text-white disabled:opacity-40 hover:bg-[#a02a10]"
+            :disabled="triggerLoading"
+            @click="triggerNow"
           >
-            <option value="">All users</option>
-            <option v-for="u in users" :key="u.id" :value="String(u.id)">
-              {{ u.username }} (#{{ u.id }})
-            </option>
-          </select>
+            {{ triggerLoading ? 'Checking…' : 'Trigger Now' }}
+          </button>
+          <p v-if="triggerResult" class="text-sm" :class="triggerResult.status === 'triggered' ? 'text-green-700' : 'text-[#8a756b]'">
+            {{ triggerResult.status === 'triggered'
+              ? `Run #${triggerResult.run_id} queued.`
+              : `Skipped — ${triggerResult.reason}` }}
+          </p>
+          <p v-if="triggerError" class="text-sm text-red-600">{{ triggerError }}</p>
+        </div>
 
-          <input
-            v-model="feedbackFilters.dateFrom"
-            type="date"
-            class="rounded-lg border border-[#d8c9c0] px-3 py-2 text-sm"
-          />
-
-          <input
-            v-model="feedbackFilters.dateTo"
-            type="date"
-            class="rounded-lg border border-[#d8c9c0] px-3 py-2 text-sm"
-          />
-
-          <select
-            v-model="feedbackFilters.usedForRetrain"
-            class="rounded-lg border border-[#d8c9c0] px-3 py-2 text-sm"
-          >
-            <option value="">All</option>
-            <option value="false">Available</option>
-            <option value="true">Currently used</option>
-          </select>
-
-          <input
-            v-model.number="kTriplets"
-            type="number"
-            min="1"
-            max="5"
-            step="1"
-            class="rounded-lg border border-[#d8c9c0] px-3 py-2 text-sm"
-          />
-
-          <div class="md:col-span-5 flex flex-wrap gap-3">
-            <button
-              type="submit"
-              class="rounded-full bg-[#5b4034] px-5 py-2 text-sm text-white hover:bg-[#c53114]"
-            >
-              Apply Filters
-            </button>
-
+        <!-- Finetune run log -->
+        <div>
+          <div class="mb-2 flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-[#5b4034]">Recent Finetune Runs</h2>
             <button
               type="button"
-              class="rounded-full border border-[#bba79d] px-5 py-2 text-sm"
-              @click="resetFeedbackFilters"
-            >
-              Reset
-            </button>
-
-            <button
-              type="button"
-              class="rounded-full border border-[#bba79d] px-5 py-2 text-sm disabled:opacity-40"
-              @click="toggleSelectAllVisible"
-              :disabled="!feedbackItems.length"
-            >
-              {{ allVisibleSelected ? 'Clear Visible' : 'Select Visible' }}
-            </button>
-
-            <button
-              type="button"
-              class="rounded-full bg-[#c53114] px-5 py-2 text-sm text-white disabled:opacity-40"
-              @click="startRetrain"
-              :disabled="retrainLoading || !selectedCount"
-            >
-              {{ retrainLoading ? 'Starting...' : 'Start Retrain' }}
-            </button>
+              class="text-xs text-[#9a867c] underline hover:text-[#5b4034]"
+              @click="loadFinetuneRuns"
+            >Refresh</button>
           </div>
-        </form>
-
-        <div class="flex justify-end text-sm text-[#8a756b]">
-          Selected:
-          <span class="ml-1 font-semibold text-[#5b4034]">{{ selectedCount }}</span>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-[#ded2ca] text-left text-xs text-[#9a867c]">
+                  <th class="px-3 py-3">#</th>
+                  <th class="px-3 py-3">Triggered</th>
+                  <th class="px-3 py-3">Source</th>
+                  <th class="px-3 py-3">Status</th>
+                  <th class="px-3 py-3">Samples</th>
+                  <th class="px-3 py-3">Triplets</th>
+                  <th class="px-3 py-3">MLflow run</th>
+                  <th class="px-3 py-3">Error</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="run in finetuneRuns"
+                  :key="run.id"
+                  class="border-b border-[#eee5df] align-top"
+                >
+                  <td class="px-3 py-3 text-[#9a867c]">{{ run.id }}</td>
+                  <td class="whitespace-nowrap px-3 py-3">{{ formatFeedbackDate(run.triggered_at) }}</td>
+                  <td class="px-3 py-3 capitalize">{{ run.trigger_source }}</td>
+                  <td class="px-3 py-3">
+                    <span
+                      class="rounded-full px-2 py-0.5 text-xs font-medium"
+                      :class="{
+                        'bg-yellow-100 text-yellow-800': run.status === 'pending' || run.status === 'running',
+                        'bg-green-100 text-green-800': run.status === 'completed',
+                        'bg-red-100 text-red-800': run.status === 'failed',
+                      }"
+                    >{{ run.status }}</span>
+                  </td>
+                  <td class="px-3 py-3 text-xs text-[#8a756b]">
+                    {{ run.t_real }}R / {{ run.t_aug }}A / {{ run.p_pos }}P
+                    <span class="block text-[10px]">real / aug / pairs</span>
+                  </td>
+                  <td class="px-3 py-3">{{ run.triplets_used }}</td>
+                  <td class="px-3 py-3 font-mono text-xs text-[#9a867c]">{{ run.mlflow_run_id?.slice(0, 8) ?? '—' }}</td>
+                  <td class="break-all px-3 py-3 text-xs text-red-600">{{ run.error_msg ?? '' }}</td>
+                </tr>
+                <tr v-if="!finetuneRuns.length">
+                  <td colspan="8" class="py-8 text-center text-[#9a867c]">No finetune runs yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="border-b border-[#ded2ca] text-left text-xs text-[#9a867c]">
-                <th class="px-3 py-4">Use</th>
-                <th class="px-3 py-4">Date</th>
-                <th class="px-3 py-4">User</th>
-                <th class="px-3 py-4">Label</th>
-                <th class="px-3 py-4">Query Patch</th>
-                <th class="px-3 py-4">Result Patch</th>
-                <th class="px-3 py-4">Used</th>
-              </tr>
-            </thead>
+        <!-- Feedback log (read-only, for reference) -->
+        <div>
+          <div class="mb-2 text-sm font-semibold text-[#5b4034]">Feedback Log</div>
+          <form
+            @submit.prevent="loadAdminFeedback"
+            class="mb-4 grid gap-4 rounded-2xl bg-white/70 p-5 md:grid-cols-4"
+          >
+            <select
+              v-model="feedbackFilters.userId"
+              class="rounded-lg border border-[#d8c9c0] px-3 py-2 text-sm"
+            >
+              <option value="">All users</option>
+              <option v-for="u in users" :key="u.id" :value="String(u.id)">
+                {{ u.username }} (#{{ u.id }})
+              </option>
+            </select>
 
-            <tbody>
-              <tr
-                v-for="item in feedbackItems"
-                :key="item.id"
-                class="border-b border-[#eee5df] align-top"
-              >
-                <td class="px-3 py-4">
-                  <input
-                    :checked="selectedFeedbackIds.has(item.id)"
-                    :disabled="item.used_for_retrain"
-                    type="checkbox"
-                    @change="toggleFeedbackSelection(item.id)"
-                  />
-                </td>
+            <input
+              v-model="feedbackFilters.dateFrom"
+              type="date"
+              class="rounded-lg border border-[#d8c9c0] px-3 py-2 text-sm"
+            />
 
-                <td class="whitespace-nowrap px-3 py-4">
-                  {{ formatFeedbackDate(item.created_at) }}
-                </td>
+            <input
+              v-model="feedbackFilters.dateTo"
+              type="date"
+              class="rounded-lg border border-[#d8c9c0] px-3 py-2 text-sm"
+            />
 
-                <td class="px-3 py-4">
-                  <div class="font-semibold text-[#5b4034]">{{ item.username }}</div>
-                  <div class="text-xs text-[#9a867c]">
-                    #{{ item.user_id }} • {{ item.user_email }}
-                  </div>
-                </td>
+            <select
+              v-model="feedbackFilters.usedForRetrain"
+              class="rounded-lg border border-[#d8c9c0] px-3 py-2 text-sm"
+            >
+              <option value="">All</option>
+              <option value="false">Not yet used</option>
+              <option value="true">Used in a run</option>
+            </select>
 
-                <td class="px-3 py-4">{{ item.label }}</td>
-                <td class="break-all px-3 py-4">{{ item.query_patch_file_name }}</td>
-                <td class="break-all px-3 py-4">{{ item.result_patch_file_name }}</td>
-                <td class="px-3 py-4">{{ item.used_for_retrain ? 'true' : 'false' }}</td>
-              </tr>
+            <div class="md:col-span-4 flex gap-3">
+              <button
+                type="submit"
+                class="rounded-full bg-[#5b4034] px-5 py-2 text-sm text-white hover:bg-[#c53114]"
+              >Apply Filters</button>
+              <button
+                type="button"
+                class="rounded-full border border-[#bba79d] px-5 py-2 text-sm"
+                @click="resetFeedbackFilters"
+              >Reset</button>
+            </div>
+          </form>
 
-              <tr v-if="!feedbackLoading && !feedbackItems.length">
-                <td colspan="7" class="py-8 text-center text-[#9a867c]">
-                  No feedback matched the current filters.
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-[#ded2ca] text-left text-xs text-[#9a867c]">
+                  <th class="px-3 py-4">Date</th>
+                  <th class="px-3 py-4">User</th>
+                  <th class="px-3 py-4">Label</th>
+                  <th class="px-3 py-4">Query Patch</th>
+                  <th class="px-3 py-4">Result Patch</th>
+                  <th class="px-3 py-4">Used in run</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="item in feedbackItems"
+                  :key="item.id"
+                  class="border-b border-[#eee5df] align-top"
+                >
+                  <td class="whitespace-nowrap px-3 py-4">{{ formatFeedbackDate(item.created_at) }}</td>
+                  <td class="px-3 py-4">
+                    <div class="font-semibold text-[#5b4034]">{{ item.username }}</div>
+                    <div class="text-xs text-[#9a867c]">#{{ item.user_id }} • {{ item.user_email }}</div>
+                  </td>
+                  <td class="px-3 py-4">{{ item.label }}</td>
+                  <td class="break-all px-3 py-4">{{ item.query_patch_file_name }}</td>
+                  <td class="break-all px-3 py-4">{{ item.result_patch_file_name }}</td>
+                  <td class="px-3 py-4">
+                    <span
+                      class="rounded-full px-2 py-0.5 text-xs"
+                      :class="item.used_for_retrain ? 'bg-green-100 text-green-800' : 'bg-[#ead8b9] text-[#8a756b]'"
+                    >{{ item.used_for_retrain ? 'yes' : 'pending' }}</span>
+                  </td>
+                </tr>
+                <tr v-if="!feedbackLoading && !feedbackItems.length">
+                  <td colspan="6" class="py-8 text-center text-[#9a867c]">
+                    No feedback matched the current filters.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p v-if="feedbackError" class="mt-2 text-sm text-red-600">{{ feedbackError }}</p>
         </div>
 
-        <p v-if="feedbackError" class="text-sm text-red-600">{{ feedbackError }}</p>
-        <p v-if="retrainError" class="text-sm text-red-600">{{ retrainError }}</p>
-        <p v-if="retrainSuccess" class="text-sm text-green-600">{{ retrainSuccess }}</p>
       </section>
     </div>
 
@@ -309,7 +350,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { fetchWithAuth, apiUrl } from '../lib/api'
 import { formatLocalDateTime, localDateEndToUtcIso, localDateStartToUtcIso } from '../lib/date'
-import { fetchAdminFeedback, retrainFromFeedback } from '../services/patch-service'
+import { fetchAdminFeedback, triggerFinetuneRun, fetchFinetuneRuns } from '../services/patch-service'
 import PlusIcon from '../components/PlusIcon.vue'
 import CreateUserModal from '../features/admin/CreateUserModal.vue'
 
@@ -326,12 +367,11 @@ const createSuccess = ref('')
 const feedbackItems = ref([])
 const feedbackLoading = ref(false)
 const feedbackError = ref('')
-const retrainLoading = ref(false)
-const retrainError = ref('')
-const retrainSuccess = ref('')
-const kTriplets = ref(1)
 
-const selectedFeedbackIds = ref(new Set())
+const finetuneRuns = ref([])
+const triggerLoading = ref(false)
+const triggerResult = ref(null)
+const triggerError = ref('')
 
 const feedbackFilters = ref({
   userId: '',
@@ -342,19 +382,6 @@ const feedbackFilters = ref({
 
 const activeMembersCount = computed(() => users.value.filter((u) => u.is_active).length)
 const deactivatedMembersCount = computed(() => users.value.filter((u) => !u.is_active).length)
-
-const selectedCount = computed(() => selectedFeedbackIds.value.size)
-
-const visibleSelectableIds = computed(() =>
-  feedbackItems.value
-    .filter((item) => !item.used_for_retrain)
-    .map((item) => item.id)
-)
-
-const allVisibleSelected = computed(() => (
-  visibleSelectableIds.value.length > 0 &&
-  visibleSelectableIds.value.every((id) => selectedFeedbackIds.value.has(id))
-))
 
 async function loadUsers() {
   loadError.value = ''
@@ -443,11 +470,8 @@ function buildFeedbackFilters() {
 async function loadAdminFeedback() {
   feedbackLoading.value = true
   feedbackError.value = ''
-  retrainSuccess.value = ''
-
   try {
     feedbackItems.value = await fetchAdminFeedback(buildFeedbackFilters())
-    syncSelectionWithVisibleRows()
   } catch (error) {
     feedbackError.value = error.message ?? 'Failed to load feedback'
   } finally {
@@ -455,76 +479,30 @@ async function loadAdminFeedback() {
   }
 }
 
-function toggleFeedbackSelection(feedbackId) {
-  const next = new Set(selectedFeedbackIds.value)
-
-  if (next.has(feedbackId)) {
-    next.delete(feedbackId)
-  } else {
-    next.add(feedbackId)
+async function loadFinetuneRuns() {
+  try {
+    finetuneRuns.value = await fetchFinetuneRuns()
+  } catch {
+    // non-blocking — table stays empty
   }
-
-  selectedFeedbackIds.value = next
-}
-
-function toggleSelectAllVisible() {
-  const next = new Set(selectedFeedbackIds.value)
-
-  if (allVisibleSelected.value) {
-    visibleSelectableIds.value.forEach((id) => next.delete(id))
-  } else {
-    visibleSelectableIds.value.forEach((id) => next.add(id))
-  }
-
-  selectedFeedbackIds.value = next
-}
-
-function syncSelectionWithVisibleRows() {
-  const visibleIds = new Set(feedbackItems.value.map((item) => item.id))
-  const next = new Set()
-
-  selectedFeedbackIds.value.forEach((id) => {
-    if (visibleIds.has(id)) next.add(id)
-  })
-
-  selectedFeedbackIds.value = next
 }
 
 function resetFeedbackFilters() {
-  feedbackFilters.value = {
-    userId: '',
-    dateFrom: '',
-    dateTo: '',
-    usedForRetrain: 'false',
-  }
-
-  kTriplets.value = 1
-  selectedFeedbackIds.value = new Set()
+  feedbackFilters.value = { userId: '', dateFrom: '', dateTo: '', usedForRetrain: 'false' }
   loadAdminFeedback()
 }
 
-async function startRetrain() {
-  retrainLoading.value = true
-  retrainError.value = ''
-  retrainSuccess.value = ''
-
+async function triggerNow() {
+  triggerLoading.value = true
+  triggerResult.value = null
+  triggerError.value = ''
   try {
-    const feedbackIds = Array.from(selectedFeedbackIds.value)
-
-    const result = await retrainFromFeedback({
-      feedbackIds,
-      kTriplets: Math.round(Number(kTriplets.value)) || 1,
-    })
-
-    retrainSuccess.value =
-      `Retrain started for ${result.feedback_count} feedback entr${result.feedback_count === 1 ? 'y' : 'ies'}.`
-
-    selectedFeedbackIds.value = new Set()
-    await loadAdminFeedback()
+    triggerResult.value = await triggerFinetuneRun()
+    await loadFinetuneRuns()
   } catch (error) {
-    retrainError.value = error.message ?? 'Failed to start retraining'
+    triggerError.value = error.message ?? 'Failed to trigger finetune run'
   } finally {
-    retrainLoading.value = false
+    triggerLoading.value = false
   }
 }
 
@@ -534,6 +512,6 @@ function formatFeedbackDate(value) {
 
 onMounted(async () => {
   await loadUsers()
-  await loadAdminFeedback()
+  await Promise.all([loadAdminFeedback(), loadFinetuneRuns()])
 })
 </script>

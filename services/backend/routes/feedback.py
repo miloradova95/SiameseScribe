@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, Depends
 from sqlmodel import Session
 
 from services.backend.routes.deps import get_current_user, get_session, require_admin
@@ -10,8 +10,6 @@ from services.backend.schemas.feedback import (
     FeedbackCreate,
     FeedbackCreateResponse,
     FeedbackListItem,
-    FeedbackRetrainRequest,
-    FeedbackRetrainResponse,
 )
 from services.backend.services import feedback_service
 from services.backend.sqlDB.users import User
@@ -70,21 +68,7 @@ def list_feedback_for_admin(
     return feedback_service.list_feedback_for_admin(session, filters)
 
 
-@router.post("/admin/retrain", response_model=FeedbackRetrainResponse)
-def retrain_from_feedback(
-    payload: FeedbackRetrainRequest,
-    background_tasks: BackgroundTasks,
-    session: Session = Depends(get_session),
-    _: User = Depends(require_admin),
-):
-    feedback_count = feedback_service.start_retrain_job(
-        session,
-        payload.feedback_ids,
-        payload.k_triplets,
-    )
-    background_tasks.add_task(
-        feedback_service.run_retrain_job,
-        payload.feedback_ids,
-        payload.k_triplets,
-    )
-    return FeedbackRetrainResponse(feedback_count=feedback_count)
+# POST /feedback/admin/retrain was removed.
+# Finetuning is now triggered via POST /admin/finetune-runs/trigger (manual)
+# or automatically every 15 min by the scheduler in main.py.
+# Every run is logged in the FinetuneRun table.
