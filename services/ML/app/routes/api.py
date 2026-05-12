@@ -31,6 +31,7 @@ _reembed_started_at: datetime | None = None
 _reembed_completed_at: datetime | None = None
 _eval_precision_at_k: float | None = None
 _eval_mAP: float | None = None
+_current_phase: str = "idle"  # "idle" | "embedding" | "evaluating"
 from shared.schemas.mlBackend import (
     EmbedAllPatchesResponse,
     EmbedPatchesRequest,
@@ -309,7 +310,7 @@ class _ReembedRequest(BaseModel):
 
 def _reembed_background(model, device: str, collection, mlflow_run_id: str | None) -> None:
     global _reembed_in_progress, _reembed_started_at, _reembed_completed_at
-    global _eval_precision_at_k, _eval_mAP
+    global _eval_precision_at_k, _eval_mAP, _current_phase
 
     _reembed_in_progress = True
     _reembed_started_at = datetime.now(timezone.utc)
@@ -318,9 +319,10 @@ def _reembed_background(model, device: str, collection, mlflow_run_id: str | Non
     _eval_mAP = None
 
     try:
+        _current_phase = "embedding"
         embed_and_upsert(model, device, collection)
 
-        # Run evaluation after re-embedding completes.
+        _current_phase = "evaluating"
         # EVAL_MAX_SAMPLES controls the test-set sample size (default 2500 ≈ 10%).
         # Set to 0 or unset for the full test set.
         _max = int(os.getenv("EVAL_MAX_SAMPLES", "2500"))
@@ -341,6 +343,7 @@ def _reembed_background(model, device: str, collection, mlflow_run_id: str | Non
     finally:
         _reembed_completed_at = datetime.now(timezone.utc)
         _reembed_in_progress = False
+        _current_phase = "idle"
 
 
 @router.post("/reembed_all")
@@ -370,9 +373,10 @@ def reembed_all(req: _ReembedRequest, request: Request):
 @router.get("/reembed_status")
 def reembed_status():
     return {
-        "in_progress":        _reembed_in_progress,
-        "started_at":         _reembed_started_at.isoformat() if _reembed_started_at else None,
-        "completed_at":       _reembed_completed_at.isoformat() if _reembed_completed_at else None,
+        "in_progress":         _reembed_in_progress,
+        "phase":               _current_phase,
+        "started_at":          _reembed_started_at.isoformat() if _reembed_started_at else None,
+        "completed_at":        _reembed_completed_at.isoformat() if _reembed_completed_at else None,
         "eval_precision_at_k": _eval_precision_at_k,
-        "eval_mAP":           _eval_mAP,
+        "eval_mAP":            _eval_mAP,
     }

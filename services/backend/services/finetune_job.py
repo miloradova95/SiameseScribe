@@ -253,6 +253,15 @@ def _start_reembed(mlflow_run_id: str | None) -> None:
         raise
 
 
+def _update_run_status(run_id: int, status: str) -> None:
+    with Session(engine) as session:
+        run = session.get(FinetuneRun, run_id)
+        if run and run.status != status:
+            run.status = status
+            session.add(run)
+            session.commit()
+
+
 def _poll_reembed_status(run_id: int, timeout_secs: int = 14400) -> tuple[float | None, float | None]:
     """Poll GET /reembed_status until in_progress=False. Returns (precision_at_k, mAP)."""
     poll_interval = 30
@@ -267,11 +276,55 @@ def _poll_reembed_status(run_id: int, timeout_secs: int = 14400) -> tuple[float 
                 status = r.json()
             if not status.get("in_progress", True):
                 return status.get("eval_precision_at_k"), status.get("eval_mAP")
-            logger.debug("Finetune run %d: re-embedding still in progress (%ds elapsed)", run_id, elapsed)
+            # Update FinetuneRun status to reflect the current phase
+            phase = status.get("phase", "embedding")
+            db_status = "evaluating" if phase == "evaluating" else "reembedding"
+            _update_run_status(run_id, db_status)
+            logger.debug("Finetune run %d: phase=%s (%ds elapsed)", run_id, phase, elapsed)
         except Exception:
             logger.exception("Error polling reembed_status for run %d", run_id)
     logger.warning("Finetune run %d: re-embedding polling timed out after %ds", run_id, timeout_secs)
     return None, None
+
+
+def recover_interrupted_runs(session: Session) -> None:
+    """
+    On startup: find any FinetuneRun that was active when the server was last killed
+    and reset it to failed, releasing its locked feedback back to the pool.
+    """
+    active_statuses = ["pending", "running", "reembedding", "evaluating"]
+    interrupted = session.exec(
+        select(FinetuneRun).where(FinetuneRun.status.in_(active_statuses))
+    ).all()
+
+    if not interrupted:
+        return
+
+    for run in interrupted:
+        logger.warning(
+            "Recovering interrupted FinetuneRun %d (was %s) — releasing feedback",
+            run.id, run.status,
+        )
+        try:
+            feedback_ids = json.loads(run.feedback_ids)
+        except Exception:
+            feedback_ids = []
+
+        if feedback_ids:
+            items = session.exec(
+                select(Feedback).where(Feedback.id.in_(feedback_ids))
+            ).all()
+            for f in items:
+                f.used_for_retrain = False
+            session.add_all(items)
+
+        run.status = "failed"
+        run.completed_at = _now()
+        run.error_msg = "Interrupted by server restart"
+        session.add(run)
+
+    session.commit()
+    logger.info("Recovered %d interrupted finetune run(s)", len(interrupted))
 
 
 def _mark_failed(run_id: int, feedback_ids: list[int], error_msg: str) -> None:

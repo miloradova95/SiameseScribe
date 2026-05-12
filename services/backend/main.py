@@ -47,6 +47,8 @@ async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
     _migrate_images_user_id()
     _migrate_finetune_runs()
+    with Session(engine) as session:
+        finetune_job.recover_interrupted_runs(session)
     _seed_images()
     _seed_patches()
     _seed_admin()

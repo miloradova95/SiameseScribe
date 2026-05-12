@@ -181,7 +181,7 @@
             :disabled="triggerLoading || reembedStatus.in_progress"
             @click="triggerNow"
           >
-            {{ triggerLoading ? 'Checking…' : reembedStatus.in_progress ? 'Re-embedding…' : 'Trigger Now' }}
+            {{ triggerLoading ? 'Checking…' : reembedStatus.in_progress ? (reembedStatus.phase === 'evaluating' ? 'Evaluating…' : 'Embedding…') : 'Trigger Now' }}
           </button>
           <p v-if="triggerResult" class="text-sm" :class="triggerResult.status === 'triggered' ? 'text-green-700' : 'text-[#8a756b]'">
             {{ triggerResult.status === 'triggered'
@@ -356,8 +356,15 @@
             <h2 class="text-sm font-semibold text-[#5b4034]">Re-embedding Status</h2>
             <span
               class="rounded-full px-2 py-0.5 text-xs font-medium"
-              :class="reembedStatus.in_progress ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'"
-            >{{ reembedStatus.in_progress ? 'Running…' : 'Idle' }}</span>
+              :class="{
+                'bg-yellow-100 text-yellow-800': reembedStatus.phase === 'embedding',
+                'bg-blue-100 text-blue-800':    reembedStatus.phase === 'evaluating',
+                'bg-green-100 text-green-800':  reembedStatus.phase === 'idle',
+              }"
+            >{{
+              reembedStatus.phase === 'embedding' ? 'Embedding…' :
+              reembedStatus.phase === 'evaluating' ? 'Evaluating…' : 'Idle'
+            }}</span>
           </div>
           <div v-if="reembedStatus.in_progress" class="text-sm text-[#8a756b]">
             Started: {{ reembedStatus.started_at ? formatFeedbackDate(reembedStatus.started_at) : '—' }}
@@ -479,7 +486,7 @@ const triggerLoading = ref(false)
 const triggerResult = ref(null)
 const triggerError = ref('')
 
-const reembedStatus = ref({ in_progress: false, started_at: null, completed_at: null, eval_precision_at_k: null, eval_mAP: null })
+const reembedStatus = ref({ in_progress: false, phase: 'idle', started_at: null, completed_at: null, eval_precision_at_k: null, eval_mAP: null })
 const mlflowUrl = import.meta.env.VITE_MLFLOW_URL ?? 'http://localhost:5000'
 let reembedPollTimer = null
 
