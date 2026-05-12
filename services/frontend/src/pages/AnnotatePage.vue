@@ -497,20 +497,24 @@ async function loadSimilarForPatch(patch) {
   similarPatches.value = []
 
   try {
-    const results = await fetchSimilarPatches(path, { topK: 4 })
-    const resolvedPatches = await Promise.all(
+    const results = await fetchSimilarPatches(path, { topK: 4, sourceImageId: patch.source_image_id })
+    const resolvedPatches = (await Promise.all(
       results.map(async (item) => {
-        const patchRecord = await fetchPatchByFileName(item.patch_filename)
-        return {
-          id: patchRecord.id,
-          label: item.patch_filename,
-          score: Math.round(item.similarity_score * 100),
-          imageSrc: getPatchFileUrlByName(item.patch_filename),
-          filePath: patchRecord.file_path,
-          heatmapSrc: null,
+        try {
+          const patchRecord = await fetchPatchByFileName(item.patch_filename)
+          return {
+            id: patchRecord.id,
+            label: item.patch_filename,
+            score: Math.round(item.similarity_score * 100),
+            imageSrc: getPatchFileUrlByName(item.patch_filename),
+            filePath: patchRecord.file_path,
+            heatmapSrc: null,
+          }
+        } catch {
+          return null
         }
       })
-    )
+    )).filter(Boolean)
 
     similarPatches.value = resolvedPatches
     await loadExistingFeedbackForCurrentPair()

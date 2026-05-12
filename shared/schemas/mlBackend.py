@@ -53,6 +53,7 @@ class EmbedPatchesResponse(BaseModel):
 class SearchPatchesRequest(BaseModel):
     embedding: Embedding128
     top_k: int = Field(4, ge=1, le=20)
+    exclude_source_image_id: int | None = None
 
 
 class SearchResultItem(BaseModel):
@@ -110,3 +111,6 @@ class RetrainResponse(BaseModel):
     status: Literal["completed", "skipped"]
     triplets_used: int
     run_id: str | None = None
+    t_real: int = 0
+    t_aug: int = 0
+    p_pos: int = 0

@@ -1,4 +1,6 @@
 import sys
+import threading
+from datetime import datetime, timezone
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -8,12 +10,28 @@ sys.path.append(str(PROJECT_ROOT))
 import numpy as np
 import torch
 from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
 from PIL import Image
 from torchvision import transforms
 
-from services.ML.app.services.Finetune import count_constructable_triplets, finetune
+from services.ML.app.services.Embedd import embed_and_upsert
+from services.ML.app.services.Evaluate import evaluate_full
+from services.ML.app.services.Finetune import count_samples, finetune
 from services.ML.app.services.HeatmapUtil import save_heatmap_overlay
 from services.ML.app.services.segment import extract_patches
+
+# ─────────────────────────────────────────────
+# Module-level state for hot-reload + re-embedding
+# ─────────────────────────────────────────────
+
+_model_lock = threading.Lock()
+
+_reembed_in_progress: bool = False
+_reembed_started_at: datetime | None = None
+_reembed_completed_at: datetime | None = None
+_eval_precision_at_k: float | None = None
+_eval_mAP: float | None = None
+_current_phase: str = "idle"  # "idle" | "embedding" | "evaluating"
 from shared.schemas.mlBackend import (
     EmbedAllPatchesResponse,
     EmbedPatchesRequest,
@@ -137,7 +155,7 @@ def embed_patches(req: EmbedPatchesRequest, request: Request):
 
 
 # ─────────────────────────────────────────────
-# 3. EMBED ALL PATCHES (initial batch embedding)
+# 3. EMBED ALL PATCHES (initial batch — kept for CLI compat)
 # ─────────────────────────────────────────────
 
 @router.post("/embed_all_patches", response_model=EmbedAllPatchesResponse)
@@ -145,8 +163,8 @@ def embed_all_patches():
     return {
         "status": "started",
         "message": (
-            "Not yet implemented as a live endpoint. "
-            "Run Embedd.py directly: "
+            "Use /reembed_all for live re-embedding after finetuning. "
+            "For initial bulk embedding run Embedd.py directly: "
             "python services/ML/app/services/Embedd.py --collection <name>"
         ),
     }
@@ -162,10 +180,14 @@ def search_patches(req: SearchPatchesRequest, request: Request):
     if collection is None:
         raise HTTPException(status_code=503, detail="ChromaDB collection not loaded — run Embedd.py first")
 
+    where = {"source_image_id": {"$ne": req.exclude_source_image_id}} \
+        if req.exclude_source_image_id is not None else None
+
     results = collection.query(
         query_embeddings=[req.embedding],
         n_results=req.top_k,
         include=["distances"],
+        **({"where": where} if where else {}),
     )
 
     ids = results["ids"][0]
@@ -235,10 +257,126 @@ def explain_pair(req: ExplainPairRequest, request: Request):
 @router.post("/retrain", response_model=RetrainResponse)
 def retrain(req: RetrainRequest):
     feedback_dicts = [f.model_dump() for f in req.feedback]
-    triplets_used = count_constructable_triplets(feedback_dicts, req.k_triplets)
+    samples = count_samples(feedback_dicts)
 
-    if triplets_used == 0:
-        return {"status": "skipped", "triplets_used": 0, "run_id": None}
+    if not samples["can_finetune"]:
+        return {
+            "status": "skipped",
+            "triplets_used": 0,
+            "run_id": None,
+            "t_real": samples["t_real"],
+            "t_aug": samples["t_aug"],
+            "p_pos": samples["p_pos"],
+        }
 
-    run_id, used_triplets = finetune(feedback_dicts, req.k_triplets)
-    return {"status": "completed", "triplets_used": used_triplets, "run_id": run_id or None}
+    result = finetune(feedback_dicts, req.k_triplets)
+    return {
+        "status": "completed",
+        "triplets_used": result["triplets_used"],
+        "run_id": result["run_id"] or None,
+        "t_real": result["t_real"],
+        "t_aug": result["t_aug"],
+        "p_pos": result["p_pos"],
+    }
+
+
+# ─────────────────────────────────────────────
+# 7. HOT-RELOAD MODEL WEIGHTS
+# ─────────────────────────────────────────────
+
+@router.post("/reload_model")
+def reload_model(request: Request):
+    model = request.app.state.model
+    device = request.app.state.device
+    model_path = PROJECT_ROOT / "data" / "models" / "trainedModel.pth"
+
+    if not model_path.exists():
+        raise HTTPException(status_code=404, detail=f"Model file not found: {model_path}")
+
+    with _model_lock:
+        model.load_state_dict(torch.load(str(model_path), map_location=device))
+        model.eval()
+
+    return {"status": "reloaded", "weights_file": model_path.name}
+
+
+# ─────────────────────────────────────────────
+# 8. RE-EMBED ALL PATCHES IN BACKGROUND
+# ─────────────────────────────────────────────
+
+class _ReembedRequest(BaseModel):
+    mlflow_run_id: str | None = None
+
+
+def _reembed_background(model, device: str, collection, mlflow_run_id: str | None) -> None:
+    global _reembed_in_progress, _reembed_started_at, _reembed_completed_at
+    global _eval_precision_at_k, _eval_mAP, _current_phase
+
+    _reembed_in_progress = True
+    _reembed_started_at = datetime.now(timezone.utc)
+    _reembed_completed_at = None
+    _eval_precision_at_k = None
+    _eval_mAP = None
+
+    try:
+        _current_phase = "embedding"
+        embed_and_upsert(model, device, collection)
+
+        _current_phase = "evaluating"
+        # EVAL_MAX_SAMPLES controls the test-set sample size (default 2500 ≈ 10%).
+        # Set to 0 or unset for the full test set.
+        _max = int(os.getenv("EVAL_MAX_SAMPLES", "2500"))
+        max_samples = _max if _max > 0 else None
+        metrics = evaluate_full(
+            collection, model, device,
+            top_k=5,
+            mlflow_run_id=mlflow_run_id,
+            exclude_same_image=True,
+            max_samples=max_samples,
+        )
+        _eval_precision_at_k = metrics.get("precision_at_k")
+        _eval_mAP = metrics.get("mAP")
+
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Re-embedding background job failed")
+    finally:
+        _reembed_completed_at = datetime.now(timezone.utc)
+        _reembed_in_progress = False
+        _current_phase = "idle"
+
+
+@router.post("/reembed_all")
+def reembed_all(req: _ReembedRequest, request: Request):
+    global _reembed_in_progress
+
+    if _reembed_in_progress:
+        raise HTTPException(status_code=409, detail="Re-embedding already in progress")
+
+    if request.app.state.collection is None:
+        raise HTTPException(status_code=503, detail="ChromaDB collection not available")
+
+    threading.Thread(
+        target=_reembed_background,
+        args=(request.app.state.model, request.app.state.device,
+              request.app.state.collection, req.mlflow_run_id),
+        daemon=True,
+    ).start()
+
+    return {"status": "started"}
+
+
+# ─────────────────────────────────────────────
+# 9. RE-EMBEDDING STATUS
+# ─────────────────────────────────────────────
+
+@router.get("/reembed_status")
+def reembed_status():
+    return {
+        "in_progress":         _reembed_in_progress,
+        "phase":               _current_phase,
+        "started_at":          _reembed_started_at.isoformat() if _reembed_started_at else None,
+        "completed_at":        _reembed_completed_at.isoformat() if _reembed_completed_at else None,
+        "eval_precision_at_k": _eval_precision_at_k,
+        "eval_mAP":            _eval_mAP,
+    }

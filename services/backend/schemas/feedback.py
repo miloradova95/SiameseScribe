@@ -51,11 +51,5 @@ class AdminFeedbackFilterParams(BaseModel):
     used_for_retrain: bool | None = None
 
 
-class FeedbackRetrainRequest(BaseModel):
-    feedback_ids: list[int] = Field(..., min_length=1)
-    k_triplets: int = Field(default=1, ge=1, le=5)
-
-
-class FeedbackRetrainResponse(BaseModel):
-    status: str = "training_started"
-    feedback_count: int
+# FeedbackRetrainRequest / FeedbackRetrainResponse removed alongside
+# POST /feedback/admin/retrain. Use POST /admin/finetune-runs/trigger instead.
