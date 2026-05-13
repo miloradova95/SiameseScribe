@@ -139,10 +139,15 @@ async function fetchSimilar(filePath) {
     const vector = embedData.embeddings?.[0]?.vector
     if (!vector) throw new Error('No embedding returned')
 
+    const searchBody = { embedding: vector, top_k: 8 }
+    if (queryPatch.value?.source_image_id != null) {
+      searchBody.exclude_source_image_id = queryPatch.value.source_image_id
+    }
+
     const searchRes = await fetch(`${ML_API}/search_patches`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ embedding: vector, top_k: 8 }),
+      body: JSON.stringify(searchBody),
     })
     if (!searchRes.ok) throw new Error(`Search failed (${searchRes.status})`)
     const searchData = await searchRes.json()

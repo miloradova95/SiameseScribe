@@ -79,6 +79,12 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device):
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Train Siamese network from scratch")
+    parser.add_argument("--epochs", type=int, default=EPOCHS, help=f"Number of training epochs (default: {EPOCHS})")
+    args = parser.parse_args()
+    epochs = args.epochs
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Device: {device}")
 
@@ -116,7 +122,7 @@ def main():
         mlflow.set_tag("mlflow.runName", f"train_{short_id}")
 
         mlflow.log_params({
-            "epochs":        EPOCHS,
+            "epochs":        epochs,
             "batch_size":    BATCH_SIZE,
             "lr":            LR,
             "k_triplets":    K_TRIPLETS,
@@ -128,7 +134,7 @@ def main():
         })
 
         best_mAP = 0.0
-        for epoch in range(EPOCHS):
+        for epoch in range(epochs):
             loss = train_one_epoch(model, dataloader, optimizer, criterion, device)
             mlflow.log_metric("train_loss", loss, step=epoch)
 
@@ -137,7 +143,7 @@ def main():
                 {"eval/precision_at_k": eval_metrics["precision_at_k"], "eval/mAP": eval_metrics["mAP"]},
                 step=epoch,
             )
-            print(f"Epoch {epoch + 1}/{EPOCHS}  loss: {loss:.4f}  "
+            print(f"Epoch {epoch + 1}/{epochs}  loss: {loss:.4f}  "
                   f"P@5: {eval_metrics['precision_at_k']:.4f}  mAP: {eval_metrics['mAP']:.4f}")
 
             if eval_metrics["mAP"] > best_mAP:

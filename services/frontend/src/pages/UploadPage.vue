@@ -7,7 +7,7 @@
 
     <main class="mx-auto flex max-w-6xl flex-col items-center px-6 pb-20 pt-6 text-center md:pt-10">
       <h1
-        class="max-w-5xl font-display text-6xl leading-none tracking-tight text-brand-accent md:text-8xl"
+        class="max-w-5xl font-display text-6xl leading-none tracking-tight text-brand-text md:text-8xl"
       >
         Upload Your Image
       </h1>
@@ -96,7 +96,7 @@
 
       <div
         v-if="error"
-        class="mt-6 w-full max-w-2xl rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-left text-sm text-red-700"
+        class="mt-6 w-full max-w-2xl rounded-2xl border border-brand-line bg-brand-surface px-5 py-4 text-left text-sm text-brand-text shadow-sm"
       >
         {{ error }}
       </div>
