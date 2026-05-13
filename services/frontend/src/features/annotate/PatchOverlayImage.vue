@@ -15,9 +15,11 @@
       v-for="patch in patches"
       :key="patch.id || patch.patch_filename"
       type="button"
-      class="absolute box-border border border-white/80 bg-white/5 transition"
+      class="absolute box-border border border-white/80 transition"
       :class="[
-        'hover:z-50 hover:bg-[#b600ff]/10 hover:outline hover:outline-2 hover:outline-[#b600ff] hover:outline-offset-[-1px]',
+        patchIsAnnotated(patch) ? 'bg-[#3f9b4f]/45 ring-1 ring-inset ring-[#2f7d3d]' : 'bg-white/5',
+        'hover:z-50 hover:outline hover:outline-2 hover:outline-[#b600ff] hover:outline-offset-[-1px]',
+        patchIsAnnotated(patch) ? 'hover:bg-[#3f9b4f]/55' : 'hover:bg-[#b600ff]/10',
         selectedPatchId === patch.id
           ? 'z-50 bg-[#b600ff]/20 outline outline-2 outline-[#b600ff] outline-offset-[-1px]'
           : 'z-10'
@@ -31,9 +33,17 @@
 <script setup>
 import { ref } from 'vue'
 
-defineProps({
+const props = defineProps({
   imageSrc: String,
   patches: Array,
+  annotatedPatchIds: {
+    type: Array,
+    default: () => [],
+  },
+  annotatedPatchNames: {
+    type: Array,
+    default: () => [],
+  },
   selectedPatchId: [String, Number],
 })
 
@@ -112,5 +122,22 @@ function patchBoxStyle(patch) {
     width: `${Math.round(w * scaleX)}px`,
     height: `${Math.round(h * scaleY)}px`,
   }
+}
+
+function patchIsAnnotated(patch) {
+  const patchId = patch?.id != null ? String(patch.id) : null
+  const patchName = patch?.patch_filename || patch?.label || null
+
+  const idMatch =
+    patchId != null &&
+    Array.isArray(props.annotatedPatchIds) &&
+    props.annotatedPatchIds.some((id) => String(id) === patchId)
+
+  const nameMatch =
+    patchName != null &&
+    Array.isArray(props.annotatedPatchNames) &&
+    props.annotatedPatchNames.includes(patchName)
+
+  return idMatch || nameMatch
 }
 </script>

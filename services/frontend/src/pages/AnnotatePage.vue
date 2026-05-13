@@ -45,6 +45,8 @@
           :image="image"
           :image-src="mainImageSrc"
           :patches="patches"
+          :annotated-patch-ids="annotatedPatchIds"
+          :annotated-patch-names="annotatedPatchNames"
           :selected-patch-id="selectedPatch?.id"
           :title="displayTitle"
           @back="router.push('/browse')"
@@ -287,6 +289,7 @@ import {
   fetchSimilarPatches,
   fetchPatchByFileName,
   fetchMyFeedbackForPair,
+  fetchMyFeedback,
   getPatchFileUrlByName,
   fetchPatchesByImageId,
   patchName,
@@ -313,6 +316,8 @@ const feedbackError = ref(null)
 const lastFeedbackLabel = ref(null)
 const feedbackSavedAt = ref(0)
 const feedbackByPair = ref({})
+const annotatedPatchIds = ref([])
+const annotatedPatchNames = ref([])
 const jumpToId = ref('')
 const feedbackToast = ref({
   visible: false,
@@ -538,6 +543,17 @@ async function submitFeedback(label) {
       }
     }
 
+    const selectedId = selectedPatch.value?.id
+    const selectedName = selectedPatch.value?.patch_filename || patchRouteParam(selectedPatch.value)
+
+    if (selectedId != null && !annotatedPatchIds.value.some((id) => String(id) === String(selectedId))) {
+      annotatedPatchIds.value = [...annotatedPatchIds.value, selectedId]
+    }
+
+    if (selectedName && !annotatedPatchNames.value.includes(selectedName)) {
+      annotatedPatchNames.value = [...annotatedPatchNames.value, selectedName]
+    }
+
     applyFeedbackState(savedFeedback)
     showFeedbackToast(
       label === 'similar'
@@ -549,6 +565,24 @@ async function submitFeedback(label) {
     showFeedbackToast(feedbackError.value, 'error')
   } finally {
     feedbackSaving.value = false
+  }
+}
+
+async function loadAnnotatedPatches() {
+  try {
+    const feedbackItems = await fetchMyFeedback()
+    const ids = new Set()
+    const names = new Set()
+
+    for (const item of Array.isArray(feedbackItems) ? feedbackItems : []) {
+      if (item?.query_patch_id != null) ids.add(String(item.query_patch_id))
+      if (item?.query_patch_file_name) names.add(item.query_patch_file_name)
+    }
+
+    annotatedPatchIds.value = [...ids]
+    annotatedPatchNames.value = [...names]
+  } catch (error) {
+    console.error('Error loading annotated patches:', error)
   }
 }
 
@@ -694,6 +728,7 @@ async function loadImageFromRoute() {
 }
 
 onMounted(loadImageFromRoute)
+onMounted(loadAnnotatedPatches)
 
 onBeforeUnmount(() => {
   hideFeedbackToast()

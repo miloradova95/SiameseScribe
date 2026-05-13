@@ -14,6 +14,8 @@
     <PatchOverlayImage
       :image-src="imageSrc"
       :patches="patches"
+      :annotated-patch-ids="annotatedPatchIds"
+      :annotated-patch-names="annotatedPatchNames"
       :selected-patch-id="selectedPatchId"
       @select="$emit('select-patch', $event)"
     />
@@ -35,6 +37,8 @@ defineProps({
   image: Object,
   imageSrc: String,
   patches: Array,
+  annotatedPatchIds: Array,
+  annotatedPatchNames: Array,
   selectedPatchId: [String, Number],
   title: String,
 })
