@@ -11,6 +11,7 @@ services:
     environment:
       SECRET_KEY: ${SECRET_KEY:-changeme_in_production}
       DATA_ROOT: /app/data
+      ML_API_URL: http://ml:8000
       # Comma-separated list of extra CORS origins added at runtime
       ALLOWED_ORIGINS: "http://localhost,http://localhost:80,http://127.0.0.1"
     restart: unless-stopped
