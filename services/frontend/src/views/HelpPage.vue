@@ -44,7 +44,7 @@
 
           <div v-else-if="similarPatches.length" class="similar-grid">
             <div v-for="item in similarPatches" :key="item.patch_filename" class="patch-card">
-              <div class="similarity-badge">{{ (item.similarity_score * 100).toFixed(1) }}%</div>
+              <div class="similarity-badge">{{ (item.similarity_score * 100).toFixed(2) }}%</div>
               <img
                 :src="patchFileUrl(item.patch_filename)"
                 :alt="item.patch_filename"

@@ -133,3 +133,17 @@ data/patches/
 ```
 
 The metadata CSV files map each patch back to its source image, group, codex, coordinates, and pen flourishing coverage score.
+
+## Embedding Patches into ChromaDB
+
+After training (or after restoring model weights), re-embed all patches so the ML service's similarity search reflects the current model. Run from the project root:
+
+```bash
+python -m services.ML.app.services.Embedd --collection patches_v1
+```
+
+This uses `data/models/trainedModel.pth` by default. To embed with a specific checkpoint:
+
+```bash
+python -m services.ML.app.services.Embedd --collection patches_v1 --model data/models/trainedModel_baseline.pth
+```
