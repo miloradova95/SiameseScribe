@@ -16,6 +16,7 @@ An AI-powered morphological retrieval tool for art history. SiameseScribe uses S
 - Conda
 - Node.js 20.19.0 or newer
 - npm
+- Docker Desktop or Docker Engine with Docker Compose
 
 ## Setup
 
@@ -56,10 +57,10 @@ npm install
 
 ## Environment Variables
 
-The backend requires a `.env` file in `services/backend/` for JWT auth and admin user seeding. Create it before starting the backend:
+The project uses a repo-root `.env` file for JWT auth and admin user seeding. Docker Compose also reads this same file. Create or update it before starting the backend or the Docker stack:
 
 ```bash
-# services/backend/.env
+# .env
 SECRET_KEY=change-this-to-a-random-secret-before-deploying
 ADMIN_USERNAME=admin
 ADMIN_EMAIL=admin@siamesescribe.local
@@ -67,6 +68,39 @@ ADMIN_PASSWORD=changeme123
 ```
 
 > Change `SECRET_KEY` and `ADMIN_PASSWORD` before any deployment.
+
+## Running with Docker
+
+Start everything from the project root:
+
+```bash
+docker compose up --build
+```
+
+Run it in the background instead:
+
+```bash
+docker compose up --build -d
+```
+
+Open the app and APIs at:
+
+```text
+http://localhost          # frontend
+http://localhost:8000/docs  # backend API
+http://localhost:8001/docs  # ML service
+http://localhost:8002/docs  # API gateway
+```
+
+Useful Docker commands:
+
+```bash
+docker compose ps
+docker compose logs -f
+docker compose down
+```
+
+The containers share the local `data/` directory through the `siamese-data` volume, so database files, models, patches, and other artifacts persist between restarts.
 
 ## Running the Project
 
