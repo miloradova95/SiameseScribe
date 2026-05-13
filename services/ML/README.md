@@ -101,20 +101,17 @@ Key config in `Training.py`:
 
 ## Step 3 — Embed All Patches (populate ChromaDB)
 
-Run after training. `--collection` is required — use a descriptive name so you can track
-which collection corresponds to which model version.
+Run after training from the **repo root**. Uses `data/models/trainedModel.pth` by default.
 
 ```bash
-python services/ML/app/services/Embedd.py  --collection patches_v1 --mlflow_run_id 9434e111de1e40bdb5a5ff1a4ce21822
+python -m services.ML.app.services.Embedd --collection patches_v1
 ```
-
-The `--mlflow_run_id` links the ChromaDB collection back to the exact MLflow run that
-produced the model weights, so you can always trace embeddings → weights → hyperparams.
 
 Optional arguments:
 ```
---model       Path to .pth checkpoint  (default: data/models/trainedModel.pth)
---patches_dir Path to patch PNGs       (default: data/patches/train)
+--model           Path to a specific .pth checkpoint  (default: data/models/trainedModel.pth)
+--patches_dir     Path to patch PNGs                  (default: data/patches/train)
+--mlflow_run_id   Link this collection to a specific MLflow run for traceability
 ```
 
 ---

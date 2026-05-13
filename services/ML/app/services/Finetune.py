@@ -22,9 +22,9 @@ MODEL_PATH    = PROJECT_ROOT / "data" / "models" / "trainedModel.pth"
 MLFLOW_DIR    = PROJECT_ROOT / "data" / "mlruns"
 EMBEDDING_DIM = 128
 
-EPOCHS     = 3
+EPOCHS     = 1
 BATCH_SIZE = 16
-LR         = 1e-6
+LR         = 1e-4
 
 # Strategy constants (see services/ML/Finetuning_Strategy.md)
 W_AUG            = 0.7   # weight for augmented-anchor triplets
@@ -249,10 +249,13 @@ def finetune(feedback: list[dict], k_triplets: int = 1) -> dict:
     if MODEL_PATH.exists():
         model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
     model.train()
+    model.feature_extractor.requires_grad_(False)
 
     triplet_criterion = TripletLoss()
     pair_criterion    = ContrastiveLoss()
-    optimizer         = torch.optim.Adam(model.parameters(), lr=LR)
+    optimizer         = torch.optim.Adam(
+        filter(lambda p: p.requires_grad, model.parameters()), lr=LR
+    )
 
     triplet_loader = DataLoader(
         _TripletDataset(all_triplets), batch_size=BATCH_SIZE, shuffle=True

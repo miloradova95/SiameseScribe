@@ -155,13 +155,21 @@ def main():
         torch.save(model.state_dict(), versioned_path)
         torch.save(model.state_dict(), MODEL_SAVE_PATH)  # latest pointer for the service
 
+        # Copy the best epoch as the canonical baseline for fine-tuning rollbacks.
+        # Fine-tuning only ever overwrites trainedModel.pth, never this file.
+        best_path     = MODEL_SAVE_PATH.parent / "trainedModel_best.pth"
+        baseline_path = MODEL_SAVE_PATH.parent / "trainedModel_baseline.pth"
+        if best_path.exists():
+            import shutil
+            shutil.copy2(best_path, baseline_path)
+
         # Log the versioned file into MLflow artifacts and tag it for visibility in the UI
         mlflow.log_artifact(str(versioned_path), artifact_path="weights")
         mlflow.set_tag("weights_file", versioned_path.name)
 
         print(f"\nVersioned weights: {versioned_path}")
         print(f"Latest pointer:    {MODEL_SAVE_PATH}")
-        print(f"Best epoch mAP:    {best_mAP:.4f}  → trainedModel_best.pth")
+        print(f"Best epoch mAP:    {best_mAP:.4f}  → trainedModel_best.pth / trainedModel_baseline.pth")
         print(f"MLflow run ID:     {run_id}")
         print(f"Next steps:")
         print(f"  1. python -m services.ML.app.services.Embedd --collection patches_v1 --mlflow_run_id {run_id}")

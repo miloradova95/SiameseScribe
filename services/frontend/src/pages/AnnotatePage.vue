@@ -604,7 +604,7 @@ async function loadSimilarForPatch(patch) {
           return {
             id: patchRecord.id,
             label: item.patch_filename,
-            score: Math.round(item.similarity_score * 100),
+            score: (item.similarity_score * 100).toFixed(2),
             imageSrc: getPatchFileUrlByName(item.patch_filename),
             filePath: patchRecord.file_path,
             heatmapSrc: null,
