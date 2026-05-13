@@ -16,6 +16,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 UPLOAD_DIR = PROJECT_ROOT / "data" / "dataset" / "preprocessed" / "TEMP"
 ML_API_URL = os.getenv("ML_API_URL", "http://127.0.0.1:8001").rstrip("/")
 CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "patches_v1")
+DATA_ROOT = Path(os.environ["DATA_ROOT"]) if os.environ.get("DATA_ROOT") else None
 logger = logging.getLogger(__name__)
 
 
@@ -398,4 +399,9 @@ def save_and_process_upload(
 
 
 def resolve_file_path(image: Image) -> Path:
-    return PROJECT_ROOT.parent / image.filePath.replace("\\", "/")
+    path_str = image.filePath.replace("\\", "/")
+    if DATA_ROOT is not None:
+        data_idx = path_str.find("data/")
+        if data_idx >= 0:
+            return DATA_ROOT / path_str[data_idx + len("data/"):]
+    return PROJECT_ROOT.parent / path_str

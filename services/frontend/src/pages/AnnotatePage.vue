@@ -1,5 +1,34 @@
 <template>
   <div class="min-h-screen bg-[#f7f3ef] text-[#6c4f3d]">
+    <transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="translate-y-2 opacity-0"
+      enter-to-class="translate-y-0 opacity-100"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="translate-y-0 opacity-100"
+      leave-to-class="translate-y-2 opacity-0"
+    >
+      <div
+        v-if="feedbackToast.visible"
+        class="fixed right-6 top-6 z-50 min-w-[240px] rounded-[14px] border px-4 py-3 shadow-[0_16px_40px_rgba(108,79,61,0.18)]"
+        :class="
+          feedbackToast.type === 'error'
+            ? 'border-[#d9a7a0] bg-[#fff1ef]'
+            : 'border-[#b9ccb0] bg-[#f5fbf1]'
+        "
+      >
+        <p
+          class="text-xs font-semibold uppercase tracking-[0.12em]"
+          :class="feedbackToast.type === 'error' ? 'text-[#9a3f31]' : 'text-[#4d6b3c]'"
+        >
+          {{ feedbackToast.type === 'error' ? 'Notification' : 'Saved' }}
+        </p>
+        <p class="mt-1 text-sm font-semibold text-[#6c4f3d]">
+          {{ feedbackToast.message }}
+        </p>
+      </div>
+    </transition>
+
     <main class="mx-auto max-w-[1560px] px-8 pb-10 pt-8">
       <section class="mt-6 border-b border-[#ddd3ca] pb-6">
         <div class="flex items-center gap-3 text-[18px]">
@@ -44,14 +73,19 @@
             <div>
               <p class="mb-3 text-[13px] font-semibold">Best Match</p>
 
-              <div class="overflow-hidden rounded-[10px] bg-[#ebe3db]">
+              <button
+                type="button"
+                class="block w-full overflow-hidden rounded-[10px] border-2 border-transparent bg-[#ebe3db] transition hover:border-[#8a6755] focus:outline-none focus:ring-2 focus:ring-[#8a6755]"
+                :disabled="!bestMatch"
+                @click="openPatch(bestMatch)"
+              >
                 <img
-                  :src="bestMatch?.imageSrc || fallbackImage"
+                  :src="heatmapOn && bestMatch?.heatmapSrc ? bestMatch.heatmapSrc : bestMatch?.imageSrc || fallbackImage"
                   :alt="bestMatch?.label || 'Best match'"
                   class="h-[275px] w-full object-cover"
                   @error="handleImageError"
                 />
-              </div>
+              </button>
 
               <p class="mt-3 text-center text-sm">
                 {{ bestMatch?.label || '-' }}
@@ -166,7 +200,7 @@
           <div class="mt-8 border-t border-[#d8cec5] pt-5">
             <div class="mb-5 flex items-center justify-between">
               <div class="flex items-center gap-2">
-                <h2 class="text-[16px]">Most similar patches</h2>
+                <h2 class="text-[16px]">Other similar patches</h2>
                 <span class="flex h-5 w-5 items-center justify-center rounded-full border border-[#6c4f3d] text-xs">
                   i
                 </span>
@@ -196,20 +230,24 @@
               {{ similarError }}
             </div>
 
-            <div v-else-if="similarPatches.length" class="grid grid-cols-4 gap-8">
+            <div v-else-if="otherSimilarPatches.length" class="grid grid-cols-4 gap-8">
               <div
-                v-for="patch in similarPatches"
+                v-for="patch in otherSimilarPatches"
                 :key="patch.id"
                 class="text-center"
               >
-                <div class="overflow-hidden rounded-[8px] bg-[#ebe3db]">
+                <button
+                  type="button"
+                  class="block w-full overflow-hidden rounded-[8px] border-2 border-transparent bg-[#ebe3db] transition hover:border-[#8a6755] focus:outline-none focus:ring-2 focus:ring-[#8a6755]"
+                  @click="openPatch(patch)"
+                >
                   <img
                     :src="heatmapOn && patch.heatmapSrc ? patch.heatmapSrc : patch.imageSrc"
                     :alt="patch.label"
                     class="h-[190px] w-full object-cover"
                     @error="handleImageError"
                   />
-                </div>
+                </button>
 
                 <p class="mt-2 text-[14px] font-semibold">
                   {{ patch.score }}%
@@ -240,7 +278,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AnnotationSidebar from '@/features/annotate/AnnotationSidebar.vue'
 import { apiUrl } from '@/lib/api'
@@ -262,7 +300,7 @@ const router = useRouter()
 
 const image = ref(null)
 const loading = ref(false)
-const heatmapOn = ref(true)
+const heatmapOn = ref(false)
 
 const patches = ref([])
 const selectedPatch = ref(null)
@@ -276,6 +314,12 @@ const lastFeedbackLabel = ref(null)
 const feedbackSavedAt = ref(0)
 const feedbackByPair = ref({})
 const jumpToId = ref('')
+const feedbackToast = ref({
+  visible: false,
+  message: '',
+  type: 'success',
+})
+let feedbackToastTimeoutId = null
 
 const fileName = computed(() => route.params.fileName)
 
@@ -301,6 +345,7 @@ const selectedPatchLabel = computed(() => {
 })
 
 const bestMatch = computed(() => similarPatches.value[0] || null)
+const otherSimilarPatches = computed(() => similarPatches.value.slice(1))
 
 const selectedPatchIndex = computed(() => {
   if (!selectedPatch.value || !patches.value.length) return -1
@@ -368,6 +413,16 @@ function jumpToPatch() {
   jumpToId.value = ''
 }
 
+function patchRouteParam(patch) {
+  return patch?.label || patch?.patch_filename || patchName(getPatchPath(patch))
+}
+
+function openPatch(patch) {
+  const target = patchRouteParam(patch)
+  if (!target) return
+  router.push(`/browse/${encodeURIComponent(target)}`)
+}
+
 function getPatchPath(patch) {
   return patch.file_path || patch.filePath || patch.patch_path || patch.patch_filename
 }
@@ -391,6 +446,44 @@ function clearFeedbackState() {
   feedbackError.value = null
   lastFeedbackLabel.value = null
   feedbackSavedAt.value = 0
+}
+
+function hideFeedbackToast() {
+  feedbackToast.value = {
+    ...feedbackToast.value,
+    visible: false,
+  }
+
+  if (feedbackToastTimeoutId) {
+    window.clearTimeout(feedbackToastTimeoutId)
+    feedbackToastTimeoutId = null
+  }
+}
+
+function showFeedbackToast(message, type = 'success') {
+  const resolvedMessage =
+    message ||
+    (type === 'error'
+      ? 'Something went wrong while saving feedback.'
+      : 'Feedback saved.')
+
+  feedbackToast.value = {
+    visible: true,
+    message: resolvedMessage,
+    type,
+  }
+
+  if (feedbackToastTimeoutId) {
+    window.clearTimeout(feedbackToastTimeoutId)
+  }
+
+  feedbackToastTimeoutId = window.setTimeout(() => {
+    feedbackToast.value = {
+      ...feedbackToast.value,
+      visible: false,
+    }
+    feedbackToastTimeoutId = null
+  }, 2600)
 }
 
 function currentFeedbackKey() {
@@ -446,8 +539,14 @@ async function submitFeedback(label) {
     }
 
     applyFeedbackState(savedFeedback)
+    showFeedbackToast(
+      label === 'similar'
+        ? 'Marked as similar.'
+        : 'Marked as not similar.'
+    )
   } catch (error) {
     feedbackError.value = error.message || 'Failed to save feedback.'
+    showFeedbackToast(feedbackError.value, 'error')
   } finally {
     feedbackSaving.value = false
   }
@@ -497,20 +596,24 @@ async function loadSimilarForPatch(patch) {
   similarPatches.value = []
 
   try {
-    const results = await fetchSimilarPatches(path, { topK: 4 })
-    const resolvedPatches = await Promise.all(
+    const results = await fetchSimilarPatches(path, { topK: 5, sourceImageId: patch.source_image_id })
+    const resolvedPatches = (await Promise.all(
       results.map(async (item) => {
-        const patchRecord = await fetchPatchByFileName(item.patch_filename)
-        return {
-          id: patchRecord.id,
-          label: item.patch_filename,
-          score: Math.round(item.similarity_score * 100),
-          imageSrc: getPatchFileUrlByName(item.patch_filename),
-          filePath: patchRecord.file_path,
-          heatmapSrc: null,
+        try {
+          const patchRecord = await fetchPatchByFileName(item.patch_filename)
+          return {
+            id: patchRecord.id,
+            label: item.patch_filename,
+            score: (item.similarity_score * 100).toFixed(2),
+            imageSrc: getPatchFileUrlByName(item.patch_filename),
+            filePath: patchRecord.file_path,
+            heatmapSrc: null,
+          }
+        } catch {
+          return null
         }
       })
-    )
+    )).filter(Boolean)
 
     similarPatches.value = resolvedPatches
     await loadExistingFeedbackForCurrentPair()
@@ -552,14 +655,20 @@ async function loadImageFromRoute() {
   clearFeedbackState()
 
   try {
+    const routeValue = decodeURIComponent(fileName.value)
     const data = await fetchImages()
     const allImages = Array.isArray(data) ? data : []
 
-    const found = allImages.find(
-      (img) => img.fileName === decodeURIComponent(fileName.value)
-    )
+    const foundImage = allImages.find((img) => img.fileName === routeValue)
+    let initialSelectedPatchId = null
 
-    image.value = found || null
+    if (foundImage) {
+      image.value = foundImage
+    } else {
+      const routePatch = await fetchPatchByFileName(routeValue)
+      image.value = allImages.find((img) => img.id === routePatch.source_image_id) || null
+      initialSelectedPatchId = routePatch.id
+    }
 
     if (!image.value?.id) return
 
@@ -569,7 +678,9 @@ async function loadImageFromRoute() {
       ? patchData.map(normalizePatch)
       : []
 
-    selectedPatch.value = patches.value[0] || null
+    selectedPatch.value = initialSelectedPatchId
+      ? patches.value.find((patch) => patch.id === initialSelectedPatchId) || patches.value[0] || null
+      : patches.value[0] || null
 
     if (selectedPatch.value) {
       await loadSimilarForPatch(selectedPatch.value)
@@ -583,6 +694,10 @@ async function loadImageFromRoute() {
 }
 
 onMounted(loadImageFromRoute)
+
+onBeforeUnmount(() => {
+  hideFeedbackToast()
+})
 
 watch(() => route.params.fileName, loadImageFromRoute)
 </script>

@@ -79,6 +79,12 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device):
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Train Siamese network from scratch")
+    parser.add_argument("--epochs", type=int, default=EPOCHS, help=f"Number of training epochs (default: {EPOCHS})")
+    args = parser.parse_args()
+    epochs = args.epochs
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Device: {device}")
 
@@ -116,7 +122,7 @@ def main():
         mlflow.set_tag("mlflow.runName", f"train_{short_id}")
 
         mlflow.log_params({
-            "epochs":        EPOCHS,
+            "epochs":        epochs,
             "batch_size":    BATCH_SIZE,
             "lr":            LR,
             "k_triplets":    K_TRIPLETS,
@@ -128,7 +134,7 @@ def main():
         })
 
         best_mAP = 0.0
-        for epoch in range(EPOCHS):
+        for epoch in range(epochs):
             loss = train_one_epoch(model, dataloader, optimizer, criterion, device)
             mlflow.log_metric("train_loss", loss, step=epoch)
 
@@ -137,7 +143,7 @@ def main():
                 {"eval/precision_at_k": eval_metrics["precision_at_k"], "eval/mAP": eval_metrics["mAP"]},
                 step=epoch,
             )
-            print(f"Epoch {epoch + 1}/{EPOCHS}  loss: {loss:.4f}  "
+            print(f"Epoch {epoch + 1}/{epochs}  loss: {loss:.4f}  "
                   f"P@5: {eval_metrics['precision_at_k']:.4f}  mAP: {eval_metrics['mAP']:.4f}")
 
             if eval_metrics["mAP"] > best_mAP:
@@ -149,13 +155,21 @@ def main():
         torch.save(model.state_dict(), versioned_path)
         torch.save(model.state_dict(), MODEL_SAVE_PATH)  # latest pointer for the service
 
+        # Copy the best epoch as the canonical baseline for fine-tuning rollbacks.
+        # Fine-tuning only ever overwrites trainedModel.pth, never this file.
+        best_path     = MODEL_SAVE_PATH.parent / "trainedModel_best.pth"
+        baseline_path = MODEL_SAVE_PATH.parent / "trainedModel_baseline.pth"
+        if best_path.exists():
+            import shutil
+            shutil.copy2(best_path, baseline_path)
+
         # Log the versioned file into MLflow artifacts and tag it for visibility in the UI
         mlflow.log_artifact(str(versioned_path), artifact_path="weights")
         mlflow.set_tag("weights_file", versioned_path.name)
 
         print(f"\nVersioned weights: {versioned_path}")
         print(f"Latest pointer:    {MODEL_SAVE_PATH}")
-        print(f"Best epoch mAP:    {best_mAP:.4f}  → trainedModel_best.pth")
+        print(f"Best epoch mAP:    {best_mAP:.4f}  → trainedModel_best.pth / trainedModel_baseline.pth")
         print(f"MLflow run ID:     {run_id}")
         print(f"Next steps:")
         print(f"  1. python -m services.ML.app.services.Embedd --collection patches_v1 --mlflow_run_id {run_id}")

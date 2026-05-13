@@ -1,0 +1,31 @@
+fastapi==0.135.3
+uvicorn[standard]==0.42.0
+pydantic==2.12.5
+python-dotenv==1.2.2
+python-multipart==0.0.26
+# PyTorch – CPU wheels; change index-url for GPU builds
+torch==2.11.0
+torchvision==0.26.0
+# Vision / image processing
+numpy==1.26.4
+pillow==12.1.1
+opencv-python-headless==4.9.0.80
+onnxruntime==1.24.4
+# Data / ML utilities
+pandas==2.3.3
+scikit-learn==1.8.0
+scipy==1.17.1
+tqdm==4.67.3
+patchify==0.2.3
+pyyaml==6.0.3
+# Vector store + embeddings
+chromadb==1.5.5
+segmentation-models-pytorch
+# Experiment tracking
+mlflow==3.11.1
+# DB (shared with backend)
+SQLAlchemy==2.0.49
+sqlmodel
+python-jose[cryptography]==3.5.0
+bcrypt==5.0.0
+httpx==0.28.1

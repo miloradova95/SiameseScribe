@@ -37,7 +37,7 @@ export async function fetchPatchesByImageId(imageId) {
 }
 
 export async function fetchSimilarPatches(filePath, options = {}) {
-  const { topK = 8 } = options
+  const { topK = 8, sourceImageId = null } = options
 
   const embedResponse = await fetch(`${ML_API}/embed_patches`, {
     method: 'POST',
@@ -54,10 +54,15 @@ export async function fetchSimilarPatches(filePath, options = {}) {
     throw new Error('No embedding returned')
   }
 
+  const searchBody = { embedding: vector, top_k: topK }
+  if (sourceImageId != null) {
+    searchBody.exclude_source_image_id = sourceImageId
+  }
+
   const searchResponse = await fetch(`${ML_API}/search_patches`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ embedding: vector, top_k: topK }),
+    body: JSON.stringify(searchBody),
   })
   if (!searchResponse.ok) {
     throw new Error(buildErrorMessage('Search failed', searchResponse))
@@ -145,28 +150,33 @@ export async function fetchAdminFeedback(filters = {}) {
   return response.json()
 }
 
-export async function retrainFromFeedback({ feedbackIds, kTriplets = 1 }) {
-  const response = await fetchWithAuth(apiUrl('/feedback/admin/retrain'), {
+// retrainFromFeedback() was removed. Finetuning is now triggered automatically
+// by the backend scheduler, or manually via triggerFinetuneRun() below.
+
+export async function triggerFinetuneRun() {
+  const response = await fetchWithAuth(apiUrl('/admin/finetune-runs/trigger'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      feedback_ids: feedbackIds,
-      k_triplets: kTriplets,
-    }),
   })
-
   if (!response.ok) {
-    let message = 'Failed to start retraining'
     const err = await response.json().catch(() => ({}))
-    if (err?.detail) {
-      if (Array.isArray(err.detail)) {
-        message = err.detail.map((e) => e.msg ?? String(e)).join('; ')
-      } else {
-        message = err.detail
-      }
-    }
-    throw new Error(message)
+    throw new Error(err?.detail ?? `Trigger failed (${response.status})`)
   }
+  return response.json()
+}
 
+export async function fetchFinetuneRuns(limit = 50) {
+  const response = await fetchWithAuth(apiUrl(`/admin/finetune-runs?limit=${limit}`))
+  if (!response.ok) {
+    throw new Error(`Failed to load finetune runs (${response.status})`)
+  }
+  return response.json()
+}
+
+export async function fetchReembedStatus() {
+  const ML_API = import.meta.env.VITE_ML_API_URL ?? 'http://localhost:8001'
+  const response = await fetch(`${ML_API}/reembed_status`)
+  if (!response.ok) {
+    throw new Error(`Failed to fetch re-embed status (${response.status})`)
+  }
   return response.json()
 }

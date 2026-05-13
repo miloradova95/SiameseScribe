@@ -73,6 +73,70 @@ def store_embeddings(
     print(f"Done — {len(ids)} embeddings in collection '{collection.name}'")
 
 
+UPLOADS_DIR = PROJECT_ROOT / "data" / "patches" / "uploads"
+
+
+def embed_and_upsert(model, device: str, collection) -> int:
+    """
+    Re-embed all patches (training + uploaded) and upsert into ChromaDB.
+    Safe to call repeatedly — uses upsert, so existing entries are updated in place.
+    Returns the total number of patches embedded.
+    """
+    import pandas as pd
+
+    total = 0
+
+    # ── Training patches from metadata CSV ──────────────────────────────────
+    if METADATA_CSV.exists():
+        df = pd.read_csv(METADATA_CSV)
+        train_paths = [PATCHES_DIR / row["patch_filename"] for _, row in df.iterrows()]
+        train_meta = [
+            {
+                "source_image":            row["source_image"],
+                "source_image_id":         int(row["source_image_id"]),
+                "group":                   row["group"],
+                "codex":                   row["codex"],
+                "x":                       int(row["x"]),
+                "y":                       int(row["y"]),
+                "pen_flourishing_percent": float(row["pen_flourishing_percent"]),
+            }
+            for _, row in df.iterrows()
+        ]
+        existing_train = [(p, m) for p, m in zip(train_paths, train_meta) if p.exists()]
+        if existing_train:
+            paths, metas = zip(*existing_train)
+            embs = embed_patches(model, list(paths), device)
+            store_embeddings(collection, list(paths), embs, list(metas))
+            total += len(paths)
+            print(f"Training patches embedded: {len(paths)}")
+
+    # ── Uploaded patches (flat directory, no metadata CSV) ──────────────────
+    if UPLOADS_DIR.exists():
+        upload_paths = sorted(UPLOADS_DIR.glob("*.png"))
+        if upload_paths:
+            # Preserve existing ChromaDB metadata (source_image_id, group, etc.)
+            # by fetching it before upsert; fall back to a stub for brand-new entries.
+            existing_docs = collection.get(
+                ids=[p.name for p in upload_paths],
+                include=["metadatas"],
+            )
+            meta_by_id = {
+                doc_id: meta
+                for doc_id, meta in zip(existing_docs["ids"], existing_docs["metadatas"])
+                if meta is not None
+            }
+            upload_meta = [
+                meta_by_id.get(p.name, {"source_image_id": -1, "group": "", "codex": ""})
+                for p in upload_paths
+            ]
+            embs = embed_patches(model, upload_paths, device)
+            store_embeddings(collection, upload_paths, embs, upload_meta)
+            total += len(upload_paths)
+            print(f"Uploaded patches embedded: {len(upload_paths)}")
+
+    return total
+
+
 def main():
     parser = argparse.ArgumentParser(description="Embed all patches into ChromaDB")
     parser.add_argument(
