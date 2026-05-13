@@ -11,7 +11,7 @@ import torch
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import api
+from services.ML.app.routes import api
 from services.ML.app.chroma_client import get_chroma_client, get_or_create_collection
 from services.ML.app.services.SiameseNetwork import SiameseNetwork
 from services.ML.app.services.segmentation.segmentation_service import SegmentationService

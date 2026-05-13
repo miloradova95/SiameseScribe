@@ -8,6 +8,8 @@ BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parents[3]
 sys.path.append(str(PROJECT_ROOT))
 
+DATA_ROOT = Path(os.environ["DATA_ROOT"]) if os.environ.get("DATA_ROOT") else None
+
 import numpy as np
 import torch
 from fastapi import APIRouter, HTTPException, Request
@@ -58,31 +60,20 @@ _embed_transforms = transforms.Compose([
 
 
 def _resolve_path(path_str: str) -> Path:
-    
-    """
-    Resolve a patch path to an absolute filesystem path.
-
-    Paths stored in the DB are relative to PROJECT_ROOT.parent
-    (e.g. "SiameseScribe/data/patches/test/foo.png").
-    Paths coming from the segment endpoint are relative to PROJECT_ROOT.
-    Handle both cases by trying PROJECT_ROOT.parent first, then PROJECT_ROOT.
-    """
-    
     normalized = path_str.replace("\\", "/")
-
     p = Path(normalized)
     if p.is_absolute():
         return p
-
+    if DATA_ROOT is not None:
+        data_idx = normalized.find("data/")
+        if data_idx >= 0:
+            return DATA_ROOT / normalized[data_idx + len("data/"):]
     candidate = PROJECT_ROOT.parent / p
     if candidate.exists():
         return candidate
-
     candidate2 = PROJECT_ROOT / p
     if candidate2.exists():
         return candidate2
-
-    # Return the most-likely path so the caller gets a clear FileNotFoundError
     return PROJECT_ROOT.parent / p
 
 
@@ -184,12 +175,20 @@ def search_patches(req: SearchPatchesRequest, request: Request):
     where = {"source_image_id": {"$ne": req.exclude_source_image_id}} \
         if req.exclude_source_image_id is not None else None
 
-    results = collection.query(
-        query_embeddings=[req.embedding],
-        n_results=req.top_k,
-        include=["distances"],
-        **({"where": where} if where else {}),
-    )
+    try:
+        results = collection.query(
+            query_embeddings=[req.embedding],
+            n_results=req.top_k,
+            include=["distances"],
+            **({"where": where} if where else {}),
+        )
+    except Exception:
+        # ChromaDB collection missing source_image_id metadata (old embeddings) — retry without filter
+        results = collection.query(
+            query_embeddings=[req.embedding],
+            n_results=req.top_k,
+            include=["distances"],
+        )
 
     ids = results["ids"][0]
     distances = results["distances"][0]
@@ -218,8 +217,8 @@ def explain_pair(req: ExplainPairRequest, request: Request):
     if not result_path.exists():
         raise HTTPException(status_code=404, detail=f"Result patch not found: {result_path}")
 
-    query_id = Path(req.query_patch_path).stem
-    result_id = Path(req.result_patch_path).stem
+    query_id = Path(req.query_patch_path.replace("\\", "/")).stem
+    result_id = Path(req.result_patch_path.replace("\\", "/")).stem
 
     query_pil = Image.open(query_path).convert("RGB")
     result_pil = Image.open(result_path).convert("RGB")

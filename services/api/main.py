@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -16,7 +17,7 @@ from datetime import datetime, timezone
 
 from shared.schemas.mlBackend import ExplainPairRequest, ExplainPairResponse
 
-ML_SERVICE_URL = "http://localhost:8001"
+ML_SERVICE_URL = os.getenv("ML_SERVICE_URL", "http://localhost:8001")
 
 # ── Database ──────────────────────────────────
 engine = create_engine("sqlite:///./users.db", connect_args={"check_same_thread": False})

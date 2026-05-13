@@ -1,0 +1,11 @@
+.git
+.env
+data/
+node_modules
+**/node_modules
+services/frontend/dist
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+data/mlruns

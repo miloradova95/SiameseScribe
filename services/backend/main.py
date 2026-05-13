@@ -67,6 +67,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="SiameseScribe API", lifespan=lifespan)
 
+_extra_origins = [
+    o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()
+]
 ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -74,6 +77,7 @@ ALLOWED_ORIGINS = [
     "http://127.0.0.1:5174",
     "http://localhost:5175",
     "http://127.0.0.1:5175",
+    *_extra_origins,
 ]
 
 app.add_middleware(
