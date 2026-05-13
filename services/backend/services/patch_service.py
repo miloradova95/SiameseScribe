@@ -1,8 +1,10 @@
+import os
 from sqlmodel import Session, select
 from pathlib import Path
 from services.backend.sqlDB.patches import Patch
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
+DATA_ROOT = Path(os.environ["DATA_ROOT"]) if os.environ.get("DATA_ROOT") else None
 
 
 def get_all(session: Session) -> list[Patch]:
@@ -22,4 +24,9 @@ def get_by_file_name(session: Session, file_name: str) -> Patch | None:
 
 
 def resolve_file_path(patch: Patch) -> Path:
-    return PROJECT_ROOT.parent / patch.file_path.replace("\\", "/")
+    path_str = patch.file_path.replace("\\", "/")
+    if DATA_ROOT is not None:
+        data_idx = path_str.find("data/")
+        if data_idx >= 0:
+            return DATA_ROOT / path_str[data_idx + len("data/"):]
+    return PROJECT_ROOT.parent / path_str

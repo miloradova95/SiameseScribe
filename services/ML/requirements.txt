@@ -20,6 +20,7 @@ patchify==0.2.3
 pyyaml==6.0.3
 # Vector store + embeddings
 chromadb==1.5.5
+segmentation-models-pytorch
 # Experiment tracking
 mlflow==3.11.1
 # DB (shared with backend)

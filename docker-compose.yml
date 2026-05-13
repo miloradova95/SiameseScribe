@@ -7,9 +7,10 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./data:/app/data
+      - siamese-data:/app/data
     environment:
       SECRET_KEY: ${SECRET_KEY:-changeme_in_production}
+      DATA_ROOT: /app/data
       # Comma-separated list of extra CORS origins added at runtime
       ALLOWED_ORIGINS: "http://localhost,http://localhost:80,http://127.0.0.1"
     restart: unless-stopped
@@ -22,9 +23,10 @@ services:
     ports:
       - "8001:8000"
     volumes:
-      - ./data:/app/data
+      - siamese-data:/app/data
     environment:
       CHROMA_COLLECTION: ${CHROMA_COLLECTION:-patches_v1}
+      DATA_ROOT: /app/data
     restart: unless-stopped
 
   # ── Lightweight API gateway (user management + ML proxy) ────────────────────
@@ -35,7 +37,7 @@ services:
     ports:
       - "8002:8000"
     volumes:
-      - ./data:/app/data
+      - siamese-data:/app/data
     environment:
       # Points to the ml service inside the Docker network
       ML_SERVICE_URL: "http://ml:8000"
@@ -50,9 +52,18 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_BASE_URL: /api
+        VITE_ML_API_URL: /ml
     ports:
       - "80:80"
     depends_on:
       - backend
     restart: unless-stopped
 
+# Shared data volume — bind-mounted to ./data on the host
+volumes:
+  siamese-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data
