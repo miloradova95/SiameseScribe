@@ -6,7 +6,6 @@ import HelpPage from '@/pages/HelpPage.vue'
 import UploadPage from '@/pages/UploadPage.vue'
 import ProfilePage from '@/pages/ProfilePage.vue'
 import BrowsePage from '@/pages/BrowsePage.vue'
-import AdminPage from '@/pages/AdminPage.vue'
 import AnnotatePage from '@/pages/AnnotatePage.vue'
 
 
@@ -17,7 +16,7 @@ const routes = [
   { path: '/upload', name: 'upload', component: UploadPage, meta: { requiresAuth: true } },
   { path: '/profile', name: 'profile', component: ProfilePage, meta: { requiresAuth: true } },
   { path: '/browse', name: 'browse', component: BrowsePage, meta: { requiresAuth: true } },
-  { path: '/admin', name: 'admin', component: AdminPage, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/admin', name: 'admin', redirect: '/profile?tab=admin', meta: { requiresAuth: true, adminOnly: true } },
   { path: '/help', name: 'help', component: HelpPage, meta: { requiresAuth: true } },
   { path: '/browse/:fileName', name: 'annotate', component: AnnotatePage, props: true, meta: { requiresAuth: true } },
 ]
@@ -40,6 +39,9 @@ router.beforeEach(async (to, _from, next) => {
   }
   if (to.meta.adminOnly && !authStore.isAdmin) {
     return next('/help')
+  }
+  if (to.name === 'profile' && to.query.tab === 'admin' && !authStore.isAdmin) {
+    return next({ name: 'profile', query: { ...to.query, tab: 'feedback' } })
   }
   if (to.path === '/login' && authStore.isLoggedIn) {
     return next('/help')

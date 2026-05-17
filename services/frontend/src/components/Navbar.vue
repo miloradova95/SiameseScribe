@@ -21,9 +21,6 @@
       <router-link to="/help" class="transition hover:text-[#c53114]" active-class="text-[#c53114]">
         Help
       </router-link>
-      <router-link v-if="authStore.isAdmin" to="/admin" class="hover:text-[#c53114] transition">
-        Admin
-      </router-link>
       <button
         v-if="authStore.isLoggedIn"
         @click="authStore.logout(); $router.push('/login')"

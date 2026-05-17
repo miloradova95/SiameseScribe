@@ -46,6 +46,7 @@ async def lifespan(app: FastAPI):
     # ── startup ──────────────────────────────
     SQLModel.metadata.create_all(engine)
     _migrate_images_user_id()
+    _migrate_user_bookmarks()
     _migrate_finetune_runs()
     with Session(engine) as session:
         finetune_job.recover_interrupted_runs(session)
@@ -125,6 +126,17 @@ def _migrate_images_user_id():
             connection.execute(text('ALTER TABLE images ADD COLUMN "userId" INTEGER'))
 
         connection.execute(text('CREATE INDEX IF NOT EXISTS "ix_images_userId" ON images ("userId")'))
+
+
+def _migrate_user_bookmarks():
+    with engine.begin() as connection:
+        columns = connection.execute(text("PRAGMA table_info(users)")).fetchall()
+        column_names = {column[1] for column in columns}
+
+        if "bookmarks" not in column_names:
+            connection.execute(text('ALTER TABLE users ADD COLUMN "bookmarks" JSON'))
+
+        connection.execute(text('UPDATE users SET "bookmarks" = \'[]\' WHERE "bookmarks" IS NULL'))
 
 
 def _seed_patches():
