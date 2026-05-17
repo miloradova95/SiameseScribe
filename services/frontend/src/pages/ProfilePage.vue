@@ -28,6 +28,15 @@
           >
             Bookmarks
           </button>
+
+          <button
+            v-if="authStore.isAdmin"
+            class="w-full rounded-xl px-4 py-3 text-left"
+            :class="activeTab === 'admin' ? 'bg-[#d8cdc6]' : 'hover:bg-[#eee7e2]'"
+            @click="activeTab = 'admin'"
+          >
+            Admin Panel
+          </button>
         </nav>
 
         <button class="mt-auto px-4 py-3 text-left text-xl hover:opacity-70" @click="logout">
@@ -166,7 +175,7 @@
             </div>
           </template>
 
-          <template v-else>
+          <template v-else-if="activeTab === 'bookmarks'">
             <div
               v-if="bookmarkedImages.length"
               class="grid grid-cols-2 gap-8 md:grid-cols-3 xl:grid-cols-4"
@@ -183,6 +192,10 @@
               No bookmarked images yet.
             </p>
           </template>
+
+          <template v-else-if="activeTab === 'admin' && authStore.isAdmin">
+            <AdminPanel />
+          </template>
         </div>
       </section>
     </div>
@@ -191,15 +204,18 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import ImageCard from '@/components/ImageCard.vue'
+import AdminPanel from '@/features/admin/AdminPanel.vue'
 import { apiUrl } from '@/lib/api'
 import { formatLocalDateTime } from '@/lib/date'
+import { clearBookmarkCache, fetchBookmarks } from '@/services/bookmark-service'
 import { fetchMyFeedback } from '@/services/patch-service'
 import { fetchMyImages } from '@/services/image-service'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const activeTab = ref('feedback')
@@ -212,6 +228,7 @@ const uploadsLoading = ref(false)
 const uploadsError = ref(null)
 
 const pageTitle = computed(() => {
+  if (activeTab.value === 'admin') return 'Admin Panel'
   if (activeTab.value === 'bookmarks') return 'Bookmarks'
   if (activeTab.value === 'uploads') return 'My Uploads'
   return 'My Feedback'
@@ -219,8 +236,17 @@ const pageTitle = computed(() => {
 
 const bookmarkedImages = computed(() => bookmarks.value)
 
-function loadBookmarks() {
-  bookmarks.value = JSON.parse(localStorage.getItem('bookmarks') || '[]')
+const allowedTabs = computed(() => {
+  const baseTabs = ['feedback', 'uploads', 'bookmarks']
+  return authStore.isAdmin ? [...baseTabs, 'admin'] : baseTabs
+})
+
+function resolveTab(tab) {
+  return allowedTabs.value.includes(tab) ? tab : 'feedback'
+}
+
+async function loadBookmarks(force = false) {
+  bookmarks.value = await fetchBookmarks(force)
 }
 
 function goToImage(image) {
@@ -264,24 +290,33 @@ async function loadUploads() {
 
 function logout() {
   authStore.logout()
+  clearBookmarkCache()
   router.push('/login')
 }
 
 onMounted(() => {
+  activeTab.value = resolveTab(route.query.tab)
   loadBookmarks()
   loadFeedback()
   loadUploads()
 
-  window.addEventListener('bookmarks-updated', loadBookmarks)
-  window.addEventListener('storage', loadBookmarks)
+  window.addEventListener('bookmarks-updated', handleBookmarksUpdated)
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('bookmarks-updated', loadBookmarks)
-  window.removeEventListener('storage', loadBookmarks)
+  window.removeEventListener('bookmarks-updated', handleBookmarksUpdated)
 })
 
+function handleBookmarksUpdated(event) {
+  const updatedBookmarks = event.detail?.bookmarks
+  bookmarks.value = Array.isArray(updatedBookmarks) ? updatedBookmarks : []
+}
+
 watch(activeTab, (tab) => {
+  if (route.query.tab !== tab) {
+    router.replace({ query: { ...route.query, tab } })
+  }
+
   if (tab === 'feedback' && !feedbackLoading.value) {
     loadFeedback()
   }
@@ -290,4 +325,32 @@ watch(activeTab, (tab) => {
     loadUploads()
   }
 })
+
+watch(
+  () => route.query.tab,
+  (tab) => {
+    const nextTab = resolveTab(tab)
+    if (activeTab.value !== nextTab) {
+      activeTab.value = nextTab
+    }
+  }
+)
+
+watch(
+  () => authStore.isAdmin,
+  (isAdmin) => {
+    if (!isAdmin && activeTab.value === 'admin') {
+      activeTab.value = 'feedback'
+    }
+  }
+)
+
+watch(
+  () => authStore.user?.id,
+  () => {
+    clearBookmarkCache()
+    loadBookmarks(true)
+  },
+  { immediate: true }
+)
 </script>
