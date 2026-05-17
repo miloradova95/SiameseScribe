@@ -1,34 +1,5 @@
 <template>
   <div class="min-h-screen bg-[#f7f3ef] text-[#6c4f3d]">
-    <transition
-      enter-active-class="transition duration-200 ease-out"
-      enter-from-class="translate-y-2 opacity-0"
-      enter-to-class="translate-y-0 opacity-100"
-      leave-active-class="transition duration-150 ease-in"
-      leave-from-class="translate-y-0 opacity-100"
-      leave-to-class="translate-y-2 opacity-0"
-    >
-      <div
-        v-if="feedbackToast.visible"
-        class="fixed bottom-6 left-1/2 z-50 min-w-[240px] -translate-x-1/2 rounded-[14px] border px-4 py-3 shadow-[0_16px_40px_rgba(108,79,61,0.18)]"
-        :class="
-          feedbackToast.type === 'error'
-            ? 'border-[#d9a7a0] bg-[#fff1ef]'
-            : 'border-[#b9ccb0] bg-[#f5fbf1]'
-        "
-      >
-        <p
-          class="text-xs font-semibold uppercase tracking-[0.12em]"
-          :class="feedbackToast.type === 'error' ? 'text-[#9a3f31]' : 'text-[#4d6b3c]'"
-        >
-          {{ feedbackToast.type === 'error' ? 'Notification' : 'Saved' }}
-        </p>
-        <p class="mt-1 text-sm font-semibold text-[#6c4f3d]">
-          {{ feedbackToast.message }}
-        </p>
-      </div>
-    </transition>
-
     <main class="mx-auto max-w-[1560px] px-8 pb-10 pt-4">
       <section class="mt-2 border-b border-[#ddd3ca] pb-6">
         <div class="flex items-center gap-3 text-[18px]">
@@ -327,7 +298,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AnnotationSidebar from '@/features/annotate/AnnotationSidebar.vue'
 import { apiUrl } from '@/lib/api'
@@ -366,12 +337,6 @@ const feedbackByPair = ref({})
 const annotatedPatchIds = ref([])
 const annotatedPatchNames = ref([])
 const jumpToId = ref('')
-const feedbackToast = ref({
-  visible: false,
-  message: '',
-  type: 'success',
-})
-let feedbackToastTimeoutId = null
 
 const fileName = computed(() => route.params.fileName)
 
@@ -500,42 +465,20 @@ function clearFeedbackState() {
   feedbackSavedAt.value = 0
 }
 
-function hideFeedbackToast() {
-  feedbackToast.value = {
-    ...feedbackToast.value,
-    visible: false,
-  }
-
-  if (feedbackToastTimeoutId) {
-    window.clearTimeout(feedbackToastTimeoutId)
-    feedbackToastTimeoutId = null
-  }
-}
-
 function showFeedbackToast(message, type = 'success') {
-  const resolvedMessage =
-    message ||
-    (type === 'error'
-      ? 'Something went wrong while saving feedback.'
-      : 'Feedback saved.')
-
-  feedbackToast.value = {
-    visible: true,
-    message: resolvedMessage,
-    type,
-  }
-
-  if (feedbackToastTimeoutId) {
-    window.clearTimeout(feedbackToastTimeoutId)
-  }
-
-  feedbackToastTimeoutId = window.setTimeout(() => {
-    feedbackToast.value = {
-      ...feedbackToast.value,
-      visible: false,
-    }
-    feedbackToastTimeoutId = null
-  }, 2600)
+  window.dispatchEvent(
+    new CustomEvent('app-notification', {
+      detail: {
+        heading: type === 'error' ? 'Notification' : 'Saved',
+        message:
+          message ||
+          (type === 'error'
+            ? 'Something went wrong while saving feedback.'
+            : 'Feedback saved.'),
+        type,
+      },
+    })
+  )
 }
 
 function currentFeedbackKey() {
@@ -776,10 +719,6 @@ async function loadImageFromRoute() {
 
 onMounted(loadImageFromRoute)
 onMounted(loadAnnotatedPatches)
-
-onBeforeUnmount(() => {
-  hideFeedbackToast()
-})
 
 watch(() => route.params.fileName, loadImageFromRoute)
 </script>

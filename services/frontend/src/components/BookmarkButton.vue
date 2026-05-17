@@ -2,6 +2,7 @@
   <button
     type="button"
     class="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow transition hover:scale-110 hover:bg-white"
+    :disabled="bookmarkSaving"
     @click.stop="toggleBookmark"
   >
     <svg
@@ -34,6 +35,7 @@ const props = defineProps({
 })
 
 const bookmarks = ref([])
+const bookmarkSaving = ref(false)
 
 async function readBookmarks(force = false) {
   bookmarks.value = await fetchBookmarks(force)
@@ -44,10 +46,46 @@ const isBookmarked = computed(() => {
 })
 
 async function toggleBookmark() {
-  if (isBookmarked.value) {
-    bookmarks.value = await removeBookmark(props.item.id)
-  } else {
-    bookmarks.value = await addBookmark(props.item.id)
+  if (bookmarkSaving.value) return
+
+  bookmarkSaving.value = true
+
+  try {
+    if (isBookmarked.value) {
+      bookmarks.value = await removeBookmark(props.item.id)
+      window.dispatchEvent(
+        new CustomEvent('app-notification', {
+          detail: {
+            heading: 'Removed',
+            message: 'Bookmark removed.',
+            type: 'success',
+          },
+        })
+      )
+    } else {
+      bookmarks.value = await addBookmark(props.item.id)
+      window.dispatchEvent(
+        new CustomEvent('app-notification', {
+          detail: {
+            heading: 'Saved',
+            message: 'Image bookmarked.',
+            type: 'success',
+          },
+        })
+      )
+    }
+  } catch (error) {
+    window.dispatchEvent(
+      new CustomEvent('app-notification', {
+        detail: {
+          heading: 'Notification',
+          message: error.message || 'Failed to update bookmark.',
+          type: 'error',
+        },
+      })
+    )
+  } finally {
+    bookmarkSaving.value = false
   }
 }
 
