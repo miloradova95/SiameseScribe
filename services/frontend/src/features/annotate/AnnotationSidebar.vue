@@ -11,7 +11,7 @@
       <BookmarkButton :item="image" />
     </div>
 
-    <PatchOverlayImage
+    <PatchOverlay
       :image-src="imageSrc"
       :patches="patches"
       :annotated-patch-ids="annotatedPatchIds"
@@ -30,7 +30,7 @@
 </template>
 
 <script setup>
-import PatchOverlayImage from './PatchOverlayImage.vue'
+import PatchOverlay from './PatchOverlay.vue'
 import BookmarkButton from '@/components/BookmarkButton.vue'
 
 defineProps({
