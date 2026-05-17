@@ -10,7 +10,7 @@
     >
       <div
         v-if="feedbackToast.visible"
-        class="fixed right-6 top-6 z-50 min-w-[240px] rounded-[14px] border px-4 py-3 shadow-[0_16px_40px_rgba(108,79,61,0.18)]"
+        class="fixed bottom-6 left-1/2 z-50 min-w-[240px] -translate-x-1/2 rounded-[14px] border px-4 py-3 shadow-[0_16px_40px_rgba(108,79,61,0.18)]"
         :class="
           feedbackToast.type === 'error'
             ? 'border-[#d9a7a0] bg-[#fff1ef]'
@@ -29,8 +29,8 @@
       </div>
     </transition>
 
-    <main class="mx-auto max-w-[1560px] px-8 pb-10 pt-8">
-      <section class="mt-6 border-b border-[#ddd3ca] pb-6">
+    <main class="mx-auto max-w-[1560px] px-8 pb-10 pt-4">
+      <section class="mt-2 border-b border-[#ddd3ca] pb-6">
         <div class="flex items-center gap-3 text-[18px]">
           <button class="text-[#c3b7ad] transition hover:text-[#8b6b59]" @click="router.push('/browse')">
             Browse
@@ -56,8 +56,8 @@
 
           <div class="mt-4 rounded-[16px] border border-[#cfc5bc] bg-[#fbf8f5] px-3 py-3">
             <div class="mb-2 flex items-baseline justify-between gap-2">
-              <p class="text-[12px] font-semibold">Navigate Patches</p>
-              <p class="text-[11px] text-[#7f6a5c]">
+              <p class="text-[14px] font-semibold">Navigate Patches</p>
+              <p class="text-[14px] text-[#7f6a5c]">
                 {{ patches.length ? `${selectedPatchIndex + 1} / ${patches.length}` : '-' }}
               </p>
             </div>
