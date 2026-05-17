@@ -11,9 +11,11 @@
       <BookmarkButton :item="image" />
     </div>
 
-    <PatchOverlayImage
+    <PatchOverlay
       :image-src="imageSrc"
       :patches="patches"
+      :annotated-patch-ids="annotatedPatchIds"
+      :annotated-patch-names="annotatedPatchNames"
       :selected-patch-id="selectedPatchId"
       @select="$emit('select-patch', $event)"
     />
@@ -28,13 +30,15 @@
 </template>
 
 <script setup>
-import PatchOverlayImage from './PatchOverlayImage.vue'
+import PatchOverlay from './PatchOverlay.vue'
 import BookmarkButton from '@/components/BookmarkButton.vue'
 
 defineProps({
   image: Object,
   imageSrc: String,
   patches: Array,
+  annotatedPatchIds: Array,
+  annotatedPatchNames: Array,
   selectedPatchId: [String, Number],
   title: String,
 })
