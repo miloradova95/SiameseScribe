@@ -11,18 +11,32 @@
       @error="onError"
     />
 
+    <svg class="pointer-events-none absolute inset-0 z-10 h-full w-full">
+      <g opacity="0.45">
+        <rect
+          v-for="patchBox in annotatedPatchBoxes"
+          :key="patchBox.key"
+          :x="patchBox.left"
+          :y="patchBox.top"
+          :width="patchBox.width"
+          :height="patchBox.height"
+          fill="#3f9b4f"
+        />
+      </g>
+    </svg>
+
     <button
       v-for="patch in patches"
       :key="patch.id || patch.patch_filename"
       type="button"
       class="absolute box-border border border-white/80 transition"
       :class="[
-        patchIsAnnotated(patch) ? 'bg-[#3f9b4f]/45 ring-1 ring-inset ring-[#2f7d3d]' : 'bg-white/5',
+        patchIsAnnotated(patch) ? 'ring-1 ring-inset ring-[#2f7d3d]' : 'bg-white/5',
         'hover:z-50 hover:outline hover:outline-2 hover:outline-[#b600ff] hover:outline-offset-[-1px]',
-        patchIsAnnotated(patch) ? 'hover:bg-[#3f9b4f]/55' : 'hover:bg-[#b600ff]/10',
+        patchIsAnnotated(patch) ? 'hover:bg-transparent' : 'hover:bg-[#b600ff]/10',
         selectedPatchId === patch.id
           ? 'z-50 bg-[#b600ff]/20 outline outline-2 outline-[#b600ff] outline-offset-[-1px]'
-          : 'z-10'
+          : 'z-20'
       ]"
       :style="patchBoxStyle(patch)"
       @click="$emit('select', patch)"
@@ -31,7 +45,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps({
   imageSrc: String,
@@ -60,6 +74,15 @@ const displaySize = ref({
   naturalWidth: 1,
   naturalHeight: 1,
 })
+
+const annotatedPatchBoxes = computed(() =>
+  (Array.isArray(props.patches) ? props.patches : [])
+    .filter((patch) => patchIsAnnotated(patch))
+    .map((patch, index) => ({
+      key: `${patch.id ?? patch.patch_filename ?? 'patch'}-${index}`,
+      ...patchBox(patch),
+    })),
+)
 
 function onError(e) {
   e.target.src =
@@ -108,6 +131,17 @@ function updateImageDisplaySize() {
 }
 
 function patchBoxStyle(patch) {
+  const box = patchBox(patch)
+
+  return {
+    left: `${box.left}px`,
+    top: `${box.top}px`,
+    width: `${box.width}px`,
+    height: `${box.height}px`,
+  }
+}
+
+function patchBox(patch) {
   const scaleX = displaySize.value.renderedWidth / displaySize.value.naturalWidth
   const scaleY = displaySize.value.renderedHeight / displaySize.value.naturalHeight
 
@@ -117,10 +151,10 @@ function patchBoxStyle(patch) {
   const h = Number(patch.height ?? patch.bbox?.height ?? 128)
 
   return {
-    left: `${Math.round(displaySize.value.offsetX + x * scaleX)}px`,
-    top: `${Math.round(displaySize.value.offsetY + y * scaleY)}px`,
-    width: `${Math.round(w * scaleX)}px`,
-    height: `${Math.round(h * scaleY)}px`,
+    left: Math.round(displaySize.value.offsetX + x * scaleX),
+    top: Math.round(displaySize.value.offsetY + y * scaleY),
+    width: Math.round(w * scaleX),
+    height: Math.round(h * scaleY),
   }
 }
 
