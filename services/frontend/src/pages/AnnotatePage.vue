@@ -94,7 +94,7 @@
             </div>
 
             <div>
-              <p class="mb-3 text-[13px] font-semibold">Best Match</p>
+              <p class="mb-3 text-[13px] font-semibold">{{ isManuallySelectedResult ? 'Selected Result' : 'Best Match' }}</p>
 
               <button
                 type="button"
@@ -344,6 +344,7 @@ const image = ref(null)
 const loading = ref(false)
 const heatmapOn = ref(false) // toggles heatmaps for "Other similar patches" grid
 const heatmapOnBestMatch = ref(false) // toggles heatmap for "Best Match" only
+const isManuallySelectedResult = ref(false) // true when user clicked a non-top result into the best match slot
 
 const patches = ref([])
 const selectedPatch = ref(null)
@@ -411,7 +412,7 @@ const mainImageSrc = computed(() => {
 const selectedPatchImage = computed(() => {
   if (!selectedPatch.value) return fallbackImage
 
-  if (heatmapOn.value && bestMatch.value?.queryHeatmapSrc) {
+  if (heatmapOnBestMatch.value && bestMatch.value?.queryHeatmapSrc) {
     return bestMatch.value.queryHeatmapSrc
   }
 
@@ -474,6 +475,7 @@ async function selectBestMatch(patch) {
   updatedPatches[selectedIndex] = updatedPatches[0]
   updatedPatches[0] = patch
   similarPatches.value = updatedPatches
+  isManuallySelectedResult.value = true
 
   clearFeedbackState()
   await loadExistingFeedbackForCurrentPair()
@@ -671,6 +673,7 @@ async function loadSimilarForPatch(patch) {
   similarLoading.value = true
   similarError.value = null
   similarPatches.value = []
+  isManuallySelectedResult.value = false
 
   try {
     const results = await fetchSimilarPatches(path, {
