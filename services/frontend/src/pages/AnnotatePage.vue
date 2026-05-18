@@ -389,6 +389,10 @@ const mainImageSrc = computed(() => {
 const selectedPatchImage = computed(() => {
   if (!selectedPatch.value) return fallbackImage
 
+  if (heatmapOn.value && bestMatch.value?.queryHeatmapSrc) {
+    return bestMatch.value.queryHeatmapSrc
+  }
+
   if (selectedPatch.value.id) {
     return apiUrl(`/patches/${selectedPatch.value.id}/file`)
   }
@@ -632,6 +636,7 @@ async function loadSimilarForPatch(patch) {
             imageSrc: getPatchFileUrlByName(item.patch_filename),
             filePath: patchRecord.file_path,
             heatmapSrc: null,
+            queryHeatmapSrc: null,
           }
         } catch {
           return null
@@ -655,11 +660,12 @@ function loadHeatmapsInBackground(queryPath, patches) {
     try {
       const data = await fetchExplainPair(queryPath, patch.filePath)
       const heatmapSrc = getHeatmapFileUrl(data.heatmaps.result)
+      const queryHeatmapSrc = getHeatmapFileUrl(data.heatmaps.query)
       const idx = similarPatches.value.findIndex((p) => p.id === patch.id)
       if (idx !== -1) {
         similarPatches.value = [
           ...similarPatches.value.slice(0, idx),
-          { ...similarPatches.value[idx], heatmapSrc },
+          { ...similarPatches.value[idx], heatmapSrc, queryHeatmapSrc },
           ...similarPatches.value.slice(idx + 1),
         ]
       }
