@@ -151,6 +151,12 @@ def _to_feedback_list_item(
         id=feedback.id,
         query_patch_id=feedback.query_patch_id,
         result_patch_id=feedback.result_patch_id,
+        query_patch_source_image_id=_source_image_id_from_patch(
+            patches_by_id.get(feedback.query_patch_id)
+        ),
+        result_patch_source_image_id=_source_image_id_from_patch(
+            patches_by_id.get(feedback.result_patch_id)
+        ),
         query_patch_file_name=_file_name_from_patch(patches_by_id.get(feedback.query_patch_id)),
         result_patch_file_name=_file_name_from_patch(patches_by_id.get(feedback.result_patch_id)),
         label=_decode_label(feedback.label),
@@ -189,6 +195,10 @@ def _file_name_from_patch(patch: Patch | None) -> str:
     if not patch:
         return "Unknown patch"
     return Path(patch.file_path).name
+
+
+def _source_image_id_from_patch(patch: Patch | None) -> int | None:
+    return patch.source_image_id if patch else None
 
 
 def _patch_path_or_404(patches_by_id: dict[int, Patch], patch_id: int, patch_role: str) -> str:
