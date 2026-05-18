@@ -1,36 +1,7 @@
 <template>
   <div class="min-h-screen bg-[#f7f3ef] text-[#6c4f3d]">
-    <transition
-      enter-active-class="transition duration-200 ease-out"
-      enter-from-class="translate-y-2 opacity-0"
-      enter-to-class="translate-y-0 opacity-100"
-      leave-active-class="transition duration-150 ease-in"
-      leave-from-class="translate-y-0 opacity-100"
-      leave-to-class="translate-y-2 opacity-0"
-    >
-      <div
-        v-if="feedbackToast.visible"
-        class="fixed right-6 top-6 z-50 min-w-[240px] rounded-[14px] border px-4 py-3 shadow-[0_16px_40px_rgba(108,79,61,0.18)]"
-        :class="
-          feedbackToast.type === 'error'
-            ? 'border-[#d9a7a0] bg-[#fff1ef]'
-            : 'border-[#b9ccb0] bg-[#f5fbf1]'
-        "
-      >
-        <p
-          class="text-xs font-semibold uppercase tracking-[0.12em]"
-          :class="feedbackToast.type === 'error' ? 'text-[#9a3f31]' : 'text-[#4d6b3c]'"
-        >
-          {{ feedbackToast.type === 'error' ? 'Notification' : 'Saved' }}
-        </p>
-        <p class="mt-1 text-sm font-semibold text-[#6c4f3d]">
-          {{ feedbackToast.message }}
-        </p>
-      </div>
-    </transition>
-
-    <main class="mx-auto max-w-[1560px] px-8 pb-10 pt-8">
-      <section class="mt-6 border-b border-[#ddd3ca] pb-6">
+    <main class="mx-auto max-w-[1560px] px-8 pb-10 pt-4">
+      <section class="mt-2 border-b border-[#ddd3ca] pb-6">
         <div class="flex items-center gap-3 text-[18px]">
           <button class="text-[#c3b7ad] transition hover:text-[#8b6b59]" @click="router.push('/browse')">
             Browse
@@ -41,15 +12,64 @@
         <h1 class="mt-4 text-[28px] font-semibold text-[#6c4f3d]">Most similar patches</h1>
       </section>
       <div v-if="image" class="mt-6 grid grid-cols-[210px_minmax(0,1fr)] gap-8">
-        <AnnotationSidebar
-          :image="image"
-          :image-src="mainImageSrc"
-          :patches="patches"
-          :selected-patch-id="selectedPatch?.id"
-          :title="displayTitle"
-          @back="router.push('/browse')"
-          @select-patch="selectPatch"
-        />
+        <div>
+          <AnnotationSidebar
+            :image="image"
+            :image-src="mainImageSrc"
+            :patches="patches"
+            :annotated-patch-ids="annotatedPatchIds"
+            :annotated-patch-names="annotatedPatchNames"
+            :selected-patch-id="selectedPatch?.id"
+            :title="displayTitle"
+            @back="router.push('/browse')"
+            @select-patch="selectPatch"
+          />
+
+          <div class="mt-4 rounded-[16px] border border-[#cfc5bc] bg-[#fbf8f5] px-3 py-3">
+            <div class="mb-2 flex items-baseline justify-between gap-2">
+              <p class="text-[14px] font-semibold">Navigate Patches</p>
+              <p class="text-[14px] text-[#7f6a5c]">
+                {{ patches.length ? `${selectedPatchIndex + 1} / ${patches.length}` : '-' }}
+              </p>
+            </div>
+
+            <div class="mb-2 flex gap-2">
+              <button
+                class="flex-1 rounded-full border border-[#8a6755] bg-[#8a6755] px-2.5 py-1 text-[13px] font-bold text-white transition hover:bg-[#6c4f3d] hover:border-[#6c4f3d] disabled:border-[#c8baae] disabled:bg-[#c8baae]"
+                :disabled="!patches.length"
+                @click="goToPrevPatch"
+              >
+                ← Prev
+              </button>
+              <button
+                class="flex-1 rounded-full border border-[#8a6755] bg-[#8a6755] px-2.5 py-1 text-[13px] font-bold text-white transition hover:bg-[#6c4f3d] hover:border-[#6c4f3d] disabled:border-[#c8baae] disabled:bg-[#c8baae]"
+                :disabled="!patches.length"
+                @click="goToNextPatch"
+              >
+                Next →
+              </button>
+            </div>
+
+            <div class="flex gap-2">
+              <input
+                v-model="jumpToId"
+                type="number"
+                min="1"
+                :max="patches.length"
+                placeholder="Patch #"
+                class="w-0 flex-1 rounded-full border border-[#c8baae] bg-white px-3 py-1 text-[13px] text-[#5b4033] placeholder-[#b49f91] outline-none focus:border-[#8a6755]"
+                @keydown.enter="jumpToPatch"
+              />
+              <button
+                class="rounded-full border border-[#8a6755] bg-[#8a6755] px-3 py-1 text-[13px] font-bold text-white transition hover:bg-[#6c4f3d] hover:border-[#6c4f3d] disabled:border-[#c8baae] disabled:bg-[#c8baae]"
+                :disabled="!patches.length"
+                @click="jumpToPatch"
+              >
+                Go
+              </button>
+            </div>
+          </div>
+        </div>
 
         <section class="rounded-[18px] border border-[#cfc5bc] bg-[#fbf8f5] p-8">
           <div class="grid grid-cols-[1fr_1fr_330px] gap-8">
@@ -106,7 +126,7 @@
                 </p>
               </div>
 
-              <div class="border-t border-[#d8cec5] pt-5">
+              <div v-if="false" class="hidden border-t border-[#d8cec5] pt-5">
                 <p class="mb-2 text-[13px] font-semibold">Navigate Patches</p>
                 <p class="mb-3 text-[12px] text-[#7f6a5c]">
                   {{ patches.length ? `${selectedPatchIndex + 1} / ${patches.length}` : '—' }}
@@ -278,7 +298,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AnnotationSidebar from '@/features/annotate/AnnotationSidebar.vue'
 import { apiUrl } from '@/lib/api'
@@ -287,6 +307,7 @@ import {
   fetchSimilarPatches,
   fetchPatchByFileName,
   fetchMyFeedbackForPair,
+  fetchMyFeedback,
   getPatchFileUrlByName,
   fetchPatchesByImageId,
   patchName,
@@ -313,13 +334,9 @@ const feedbackError = ref(null)
 const lastFeedbackLabel = ref(null)
 const feedbackSavedAt = ref(0)
 const feedbackByPair = ref({})
+const annotatedPatchIds = ref([])
+const annotatedPatchNames = ref([])
 const jumpToId = ref('')
-const feedbackToast = ref({
-  visible: false,
-  message: '',
-  type: 'success',
-})
-let feedbackToastTimeoutId = null
 
 const fileName = computed(() => route.params.fileName)
 
@@ -448,42 +465,20 @@ function clearFeedbackState() {
   feedbackSavedAt.value = 0
 }
 
-function hideFeedbackToast() {
-  feedbackToast.value = {
-    ...feedbackToast.value,
-    visible: false,
-  }
-
-  if (feedbackToastTimeoutId) {
-    window.clearTimeout(feedbackToastTimeoutId)
-    feedbackToastTimeoutId = null
-  }
-}
-
 function showFeedbackToast(message, type = 'success') {
-  const resolvedMessage =
-    message ||
-    (type === 'error'
-      ? 'Something went wrong while saving feedback.'
-      : 'Feedback saved.')
-
-  feedbackToast.value = {
-    visible: true,
-    message: resolvedMessage,
-    type,
-  }
-
-  if (feedbackToastTimeoutId) {
-    window.clearTimeout(feedbackToastTimeoutId)
-  }
-
-  feedbackToastTimeoutId = window.setTimeout(() => {
-    feedbackToast.value = {
-      ...feedbackToast.value,
-      visible: false,
-    }
-    feedbackToastTimeoutId = null
-  }, 2600)
+  window.dispatchEvent(
+    new CustomEvent('app-notification', {
+      detail: {
+        heading: type === 'error' ? 'Notification' : 'Saved',
+        message:
+          message ||
+          (type === 'error'
+            ? 'Something went wrong while saving feedback.'
+            : 'Feedback saved.'),
+        type,
+      },
+    })
+  )
 }
 
 function currentFeedbackKey() {
@@ -538,6 +533,17 @@ async function submitFeedback(label) {
       }
     }
 
+    const selectedId = selectedPatch.value?.id
+    const selectedName = selectedPatch.value?.patch_filename || patchRouteParam(selectedPatch.value)
+
+    if (selectedId != null && !annotatedPatchIds.value.some((id) => String(id) === String(selectedId))) {
+      annotatedPatchIds.value = [...annotatedPatchIds.value, selectedId]
+    }
+
+    if (selectedName && !annotatedPatchNames.value.includes(selectedName)) {
+      annotatedPatchNames.value = [...annotatedPatchNames.value, selectedName]
+    }
+
     applyFeedbackState(savedFeedback)
     showFeedbackToast(
       label === 'similar'
@@ -549,6 +555,24 @@ async function submitFeedback(label) {
     showFeedbackToast(feedbackError.value, 'error')
   } finally {
     feedbackSaving.value = false
+  }
+}
+
+async function loadAnnotatedPatches() {
+  try {
+    const feedbackItems = await fetchMyFeedback()
+    const ids = new Set()
+    const names = new Set()
+
+    for (const item of Array.isArray(feedbackItems) ? feedbackItems : []) {
+      if (item?.query_patch_id != null) ids.add(String(item.query_patch_id))
+      if (item?.query_patch_file_name) names.add(item.query_patch_file_name)
+    }
+
+    annotatedPatchIds.value = [...ids]
+    annotatedPatchNames.value = [...names]
+  } catch (error) {
+    console.error('Error loading annotated patches:', error)
   }
 }
 
@@ -694,10 +718,7 @@ async function loadImageFromRoute() {
 }
 
 onMounted(loadImageFromRoute)
-
-onBeforeUnmount(() => {
-  hideFeedbackToast()
-})
+onMounted(loadAnnotatedPatches)
 
 watch(() => route.params.fileName, loadImageFromRoute)
 </script>

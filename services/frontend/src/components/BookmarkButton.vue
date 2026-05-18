@@ -2,6 +2,7 @@
   <button
     type="button"
     class="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow transition hover:scale-110 hover:bg-white"
+    :disabled="bookmarkSaving"
     @click.stop="toggleBookmark"
   >
     <svg
@@ -23,7 +24,8 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { addBookmark, fetchBookmarks, removeBookmark } from '@/services/bookmark-service'
 
 const props = defineProps({
   item: {
@@ -32,37 +34,75 @@ const props = defineProps({
   },
 })
 
-const STORAGE_KEY = 'bookmarks'
 const bookmarks = ref([])
+const bookmarkSaving = ref(false)
 
-function readBookmarks() {
-  bookmarks.value = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+async function readBookmarks(force = false) {
+  bookmarks.value = await fetchBookmarks(force)
 }
 
 const isBookmarked = computed(() => {
   return bookmarks.value.some((item) => item.id === props.item.id)
 })
 
-function toggleBookmark() {
-  readBookmarks()
+async function toggleBookmark() {
+  if (bookmarkSaving.value) return
 
-  if (isBookmarked.value) {
-    bookmarks.value = bookmarks.value.filter((item) => item.id !== props.item.id)
-  } else {
-    bookmarks.value.push(props.item)
+  bookmarkSaving.value = true
+
+  try {
+    if (isBookmarked.value) {
+      bookmarks.value = await removeBookmark(props.item.id)
+      window.dispatchEvent(
+        new CustomEvent('app-notification', {
+          detail: {
+            heading: 'Removed',
+            message: 'Bookmark removed.',
+            type: 'success',
+          },
+        })
+      )
+    } else {
+      bookmarks.value = await addBookmark(props.item.id)
+      window.dispatchEvent(
+        new CustomEvent('app-notification', {
+          detail: {
+            heading: 'Saved',
+            message: 'Image bookmarked.',
+            type: 'success',
+          },
+        })
+      )
+    }
+  } catch (error) {
+    window.dispatchEvent(
+      new CustomEvent('app-notification', {
+        detail: {
+          heading: 'Notification',
+          message: error.message || 'Failed to update bookmark.',
+          type: 'error',
+        },
+      })
+    )
+  } finally {
+    bookmarkSaving.value = false
   }
-
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarks.value))
-
-  window.dispatchEvent(new Event('bookmarks-updated'))
 }
 
 onMounted(() => {
   readBookmarks()
 
-  window.addEventListener('bookmarks-updated', readBookmarks)
-  window.addEventListener('storage', readBookmarks)
+  window.addEventListener('bookmarks-updated', handleBookmarksUpdated)
 })
+
+onBeforeUnmount(() => {
+  window.removeEventListener('bookmarks-updated', handleBookmarksUpdated)
+})
+
+function handleBookmarksUpdated(event) {
+  const updatedBookmarks = event.detail?.bookmarks
+  bookmarks.value = Array.isArray(updatedBookmarks) ? updatedBookmarks : []
+}
 
 watch(
   () => props.item?.id,
