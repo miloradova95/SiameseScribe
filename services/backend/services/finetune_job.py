@@ -97,7 +97,10 @@ def evaluate_and_trigger(session: Session, trigger_source: str = "auto") -> int 
 
     # 3. Load all feedback not yet used for a run
     unused = session.exec(
-        select(Feedback).where(Feedback.used_for_retrain == False)
+        select(Feedback).where(
+            Feedback.used_for_retrain == False,
+            Feedback.toBeDeleted == 0,
+        )
     ).all()
     if not unused:
         logger.debug("Finetune skipped: no unused feedback")
@@ -165,7 +168,10 @@ def run_automated_finetune_job(run_id: int) -> None:
 
         feedback_ids = json.loads(run.feedback_ids)
         feedback_items = session.exec(
-            select(Feedback).where(Feedback.id.in_(feedback_ids))
+            select(Feedback).where(
+                Feedback.id.in_(feedback_ids),
+                Feedback.toBeDeleted == 0,
+            )
         ).all()
         payload = _build_feedback_payload(session, list(feedback_items))
 

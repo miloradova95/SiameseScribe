@@ -15,4 +15,5 @@ class Image(SQLModel, table=True):
     filePath: str = Field(..., description="Absolute path: /data/dataset/preprocessed/")
     group: Optional[str] = Field(default=None, description="Optional group identifier for categorization")
     userId: Optional[int] = Field(default=None, foreign_key="users.id", index=True)
+    toBeDeleted: int = Field(default=0, index=True)
     patches: Optional[List[int]] = Field(default=None, sa_column=Column(JSON))

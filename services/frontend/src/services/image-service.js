@@ -27,6 +27,26 @@ export async function fetchMyImages() {
   return response.json()
 }
 
+export async function fetchAdminUploads() {
+  const response = await fetchWithAuth(apiUrl('/images/admin/uploads'))
+  if (!response.ok) {
+    throw new Error(buildErrorMessage('Failed to fetch user uploads', response))
+  }
+
+  return response.json()
+}
+
+export async function softDeleteImage(imageId) {
+  const response = await fetchWithAuth(apiUrl(`/images/${imageId}/soft-delete`), {
+    method: 'PATCH',
+  })
+  if (!response.ok) {
+    throw new Error(buildErrorMessage('Failed to delete image', response))
+  }
+
+  return response.json()
+}
+
 export async function fetchRandomImage() {
   const response = await fetchWithAuth(apiUrl('/images/random'))
   if (!response.ok) {

@@ -66,6 +66,20 @@
       <button
         type="button"
         class="pb-3 text-sm font-semibold"
+        :class="activeTab === 'uploads'
+          ? 'border-b-2 border-[#5b4034] text-[#5b4034]'
+          : 'text-[#9a867c]'"
+        @click="activeTab = 'uploads'"
+      >
+        User Uploads
+        <span class="ml-1 rounded-full bg-[#ead8b9] px-2 py-0.5 text-xs text-[#a7441d]">
+          {{ userUploads.length }}
+        </span>
+      </button>
+
+      <button
+        type="button"
+        class="pb-3 text-sm font-semibold"
         :class="activeTab === 'ml'
           ? 'border-b-2 border-[#5b4034] text-[#5b4034]'
           : 'text-[#9a867c]'"
@@ -145,9 +159,11 @@
           <button
             v-if="u.id !== authStore.user?.id"
             class="rounded-full border border-[#e3b5a8] px-4 py-1.5 text-sm text-[#c53114] hover:bg-[#f8e4df]"
-            @click="deleteUser(u.id)"
+            :disabled="u.toBeDeleted"
+            :class="u.toBeDeleted ? 'cursor-not-allowed opacity-50' : ''"
+            @click="openDeleteDialog(u)"
           >
-            Delete
+            {{ u.toBeDeleted ? 'Pending deletion' : 'Delete' }}
           </button>
         </div>
       </div>
@@ -352,6 +368,80 @@
       </div>
     </section>
 
+    <section v-if="activeTab === 'uploads'" class="space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-lg font-semibold text-[#5b4034]">User Uploads</h3>
+          <p class="text-sm text-[#8a756b]">Images uploaded by signed-in members.</p>
+        </div>
+        <button
+          type="button"
+          class="rounded-full border border-[#bba79d] px-4 py-1.5 text-xs text-[#5b4034] hover:bg-[#ead8b9]"
+          @click="loadUserUploads"
+        >
+          Refresh
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-[#ded2ca] text-left text-xs text-[#9a867c]">
+              <th class="px-3 py-4">#</th>
+              <th class="px-3 py-4">Image</th>
+              <th class="px-3 py-4">User</th>
+              <th class="px-3 py-4">Group</th>
+              <th class="px-3 py-4">Patches</th>
+              <th class="px-3 py-4">Status</th>
+              <th class="px-3 py-4"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="upload in userUploads"
+              :key="upload.id"
+              class="border-b border-[#eee5df] align-top"
+            >
+              <td class="px-3 py-4 text-[#9a867c]">{{ upload.id }}</td>
+              <td class="px-3 py-4">
+                <div class="font-semibold text-[#5b4034]">{{ upload.fileName }}</div>
+                <div class="break-all text-xs text-[#9a867c]">{{ upload.filePath }}</div>
+              </td>
+              <td class="px-3 py-4">
+                <div class="font-semibold text-[#5b4034]">{{ upload.username ?? 'Unknown' }}</div>
+                <div class="text-xs text-[#9a867c]">#{{ upload.userId ?? '-' }} - {{ upload.user_email ?? '-' }}</div>
+              </td>
+              <td class="px-3 py-4">{{ upload.group ?? '-' }}</td>
+              <td class="px-3 py-4">{{ upload.patches?.length ?? 0 }}</td>
+              <td class="px-3 py-4">
+                <span
+                  class="rounded-full px-2 py-0.5 text-xs font-medium"
+                  :class="upload.toBeDeleted ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'"
+                >
+                  {{ upload.toBeDeleted ? 'Pending deletion' : 'Active' }}
+                </span>
+              </td>
+              <td class="px-3 py-4 text-right">
+                <button
+                  type="button"
+                  class="rounded-full border border-[#e3b5a8] px-4 py-1.5 text-sm text-[#c53114] hover:bg-[#f8e4df] disabled:cursor-not-allowed disabled:opacity-50"
+                  :disabled="upload.toBeDeleted || deletingUploadId === upload.id"
+                  @click="softDeleteUpload(upload)"
+                >
+                  {{ deletingUploadId === upload.id ? 'Deleting...' : upload.toBeDeleted ? 'Deleted' : 'Delete' }}
+                </button>
+              </td>
+            </tr>
+            <tr v-if="!uploadsLoading && !userUploads.length">
+              <td colspan="7" class="py-8 text-center text-[#9a867c]">No user uploads found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p v-if="uploadsLoading" class="text-sm text-[#8a756b]">Loading uploads...</p>
+      <p v-if="uploadsError" class="text-sm text-red-600">{{ uploadsError }}</p>
+    </section>
+
     <section v-if="activeTab === 'ml'" class="space-y-6">
       <div class="space-y-3 rounded-2xl bg-white/70 p-5">
         <div class="flex items-center justify-between">
@@ -453,6 +543,146 @@
       </div>
     </section>
 
+    <div
+      v-if="deleteDialogOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4 py-8"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-user-title"
+    >
+      <div class="max-h-full w-full max-w-4xl overflow-hidden rounded-2xl bg-[#fbf7f3] shadow-2xl">
+        <div class="flex items-start justify-between gap-4 border-b border-[#ded2ca] px-6 py-5">
+          <div>
+            <h3 id="delete-user-title" class="text-xl font-semibold text-[#5b4034]">
+              Delete {{ deleteTarget?.username }}
+            </h3>
+            <p class="mt-1 text-sm text-[#8a756b]">
+              This marks the member for deletion and deactivates their account.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            class="rounded-full border border-[#bba79d] px-3 py-1 text-sm text-[#5b4034] hover:bg-[#ead8b9]"
+            @click="closeDeleteDialog"
+          >
+            Close
+          </button>
+        </div>
+
+        <div class="max-h-[70vh] overflow-y-auto px-6 py-5">
+          <p v-if="deletePreviewLoading" class="text-sm text-[#8a756b]">Loading user data...</p>
+          <p v-if="deletePreviewError" class="text-sm text-red-600">{{ deletePreviewError }}</p>
+
+          <div v-if="deletePreview" class="space-y-6">
+            <div class="grid gap-3 sm:grid-cols-2">
+              <label class="flex items-start gap-3 rounded-xl border border-[#ded2ca] bg-white/70 p-4">
+                <input
+                  v-model="deleteUploads"
+                  type="checkbox"
+                  class="mt-1 h-4 w-4 accent-[#c53114]"
+                />
+                <span>
+                  <span class="block text-sm font-semibold text-[#5b4034]">Delete uploads</span>
+                  <span class="block text-xs text-[#8a756b]">
+                    Mark {{ deletePreview.uploads.length }} upload{{ deletePreview.uploads.length === 1 ? '' : 's' }} for deletion.
+                  </span>
+                </span>
+              </label>
+
+              <label class="flex items-start gap-3 rounded-xl border border-[#ded2ca] bg-white/70 p-4">
+                <input
+                  v-model="deleteFeedback"
+                  type="checkbox"
+                  class="mt-1 h-4 w-4 accent-[#c53114]"
+                />
+                <span>
+                  <span class="block text-sm font-semibold text-[#5b4034]">Delete feedback</span>
+                  <span class="block text-xs text-[#8a756b]">
+                    Mark {{ deletePreview.feedback.length }} feedback item{{ deletePreview.feedback.length === 1 ? '' : 's' }} for deletion.
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            <div>
+              <h4 class="mb-2 text-sm font-semibold text-[#5b4034]">Uploads</h4>
+              <div class="max-h-56 overflow-y-auto rounded-xl border border-[#ded2ca] bg-white/70">
+                <table class="w-full text-sm">
+                  <thead class="bg-[#f7f1eb] text-left text-xs text-[#9a867c]">
+                    <tr>
+                      <th class="px-3 py-3">#</th>
+                      <th class="px-3 py-3">File</th>
+                      <th class="px-3 py-3">Group</th>
+                      <th class="px-3 py-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="upload in deletePreview.uploads" :key="upload.id" class="border-t border-[#eee5df]">
+                      <td class="px-3 py-3 text-[#9a867c]">{{ upload.id }}</td>
+                      <td class="break-all px-3 py-3">{{ upload.fileName }}</td>
+                      <td class="px-3 py-3">{{ upload.group ?? '-' }}</td>
+                      <td class="px-3 py-3">{{ upload.toBeDeleted ? 'Pending deletion' : 'Active' }}</td>
+                    </tr>
+                    <tr v-if="!deletePreview.uploads.length">
+                      <td colspan="4" class="py-6 text-center text-[#9a867c]">No uploads found.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <h4 class="mb-2 text-sm font-semibold text-[#5b4034]">Feedback</h4>
+              <div class="max-h-56 overflow-y-auto rounded-xl border border-[#ded2ca] bg-white/70">
+                <table class="w-full text-sm">
+                  <thead class="bg-[#f7f1eb] text-left text-xs text-[#9a867c]">
+                    <tr>
+                      <th class="px-3 py-3">Date</th>
+                      <th class="px-3 py-3">Label</th>
+                      <th class="px-3 py-3">Query Patch</th>
+                      <th class="px-3 py-3">Result Patch</th>
+                      <th class="px-3 py-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="item in deletePreview.feedback" :key="item.id" class="border-t border-[#eee5df] align-top">
+                      <td class="whitespace-nowrap px-3 py-3">{{ formatFeedbackDate(item.created_at) }}</td>
+                      <td class="px-3 py-3">{{ item.label }}</td>
+                      <td class="break-all px-3 py-3">{{ item.query_patch_file_name }}</td>
+                      <td class="break-all px-3 py-3">{{ item.result_patch_file_name }}</td>
+                      <td class="px-3 py-3">{{ item.toBeDeleted ? 'Pending deletion' : 'Active' }}</td>
+                    </tr>
+                    <tr v-if="!deletePreview.feedback.length">
+                      <td colspan="5" class="py-6 text-center text-[#9a867c]">No feedback found.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 border-t border-[#ded2ca] px-6 py-4">
+          <button
+            type="button"
+            class="rounded-full border border-[#bba79d] px-5 py-2 text-sm text-[#5b4034] hover:bg-[#ead8b9]"
+            @click="closeDeleteDialog"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="rounded-full bg-[#c53114] px-5 py-2 text-sm text-white hover:bg-[#a02a10] disabled:opacity-40"
+            :disabled="deletePreviewLoading || deleteSubmitting || !deletePreview"
+            @click="softDelete"
+          >
+            {{ deleteSubmitting ? 'Deleting...' : 'Confirm delete' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <CreateUserModal :open="showCreateUser" @close="showCreateUser = false" @create="handleCreateUser" />
   </div>
 </template>
@@ -463,11 +693,20 @@ import { useAuthStore } from '@/stores/auth'
 import { fetchWithAuth, apiUrl } from '@/lib/api'
 import { formatLocalDateTime, localDateEndToUtcIso, localDateStartToUtcIso } from '@/lib/date'
 import { fetchAdminFeedback, triggerFinetuneRun, fetchFinetuneRuns, fetchReembedStatus } from '@/services/patch-service'
+import { fetchAdminUploads, softDeleteImage } from '@/services/image-service'
 import PlusIcon from '@/components/PlusIcon.vue'
 import CreateUserModal from '@/features/admin/CreateUserModal.vue'
 
 const activeTab = ref('members')
 const showCreateUser = ref(false)
+const deleteDialogOpen = ref(false)
+const deleteTarget = ref(null)
+const deletePreview = ref(null)
+const deletePreviewLoading = ref(false)
+const deletePreviewError = ref('')
+const deleteSubmitting = ref(false)
+const deleteUploads = ref(false)
+const deleteFeedback = ref(false)
 
 const authStore = useAuthStore()
 
@@ -479,6 +718,10 @@ const createSuccess = ref('')
 const feedbackItems = ref([])
 const feedbackLoading = ref(false)
 const feedbackError = ref('')
+const userUploads = ref([])
+const uploadsLoading = ref(false)
+const uploadsError = ref('')
+const deletingUploadId = ref(null)
 
 const finetuneRuns = ref([])
 const triggerLoading = ref(false)
@@ -572,14 +815,61 @@ async function activate(userId) {
   }
 }
 
-async function deleteUser(userId) {
-  if (!confirm('Delete this user permanently?')) return
+async function openDeleteDialog(user) {
+  deleteTarget.value = user
+  deletePreview.value = null
+  deletePreviewError.value = ''
+  deleteUploads.value = false
+  deleteFeedback.value = false
+  deleteDialogOpen.value = true
+  deletePreviewLoading.value = true
 
-  const res = await fetchWithAuth(apiUrl(`/users/${userId}`), {
-    method: 'DELETE',
+  const res = await fetchWithAuth(apiUrl(`/users/${user.id}/delete-preview`))
+
+  deletePreviewLoading.value = false
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    deletePreviewError.value = err.detail ?? 'Failed to load deletion preview'
+    return
+  }
+
+  deletePreview.value = await res.json()
+}
+
+function closeDeleteDialog() {
+  if (deleteSubmitting.value) return
+  deleteDialogOpen.value = false
+  deleteTarget.value = null
+  deletePreview.value = null
+  deletePreviewError.value = ''
+}
+
+async function softDelete() {
+  if (!deleteTarget.value) return
+
+  deleteSubmitting.value = true
+  deletePreviewError.value = ''
+
+  const res = await fetchWithAuth(apiUrl(`/users/${deleteTarget.value.id}/soft-delete`), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      delete_uploads: deleteUploads.value,
+      delete_feedback: deleteFeedback.value,
+    }),
   })
 
-  if (res.ok) await loadUsers()
+  deleteSubmitting.value = false
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    deletePreviewError.value = err.detail ?? 'Failed to delete user'
+    return
+  }
+
+  closeDeleteDialog()
+  await Promise.all([loadUsers(), loadAdminFeedback(), loadUserUploads()])
 }
 
 function buildFeedbackFilters() {
@@ -611,6 +901,34 @@ async function loadAdminFeedback() {
     feedbackError.value = error.message ?? 'Failed to load feedback'
   } finally {
     feedbackLoading.value = false
+  }
+}
+
+async function loadUserUploads() {
+  uploadsLoading.value = true
+  uploadsError.value = ''
+  try {
+    userUploads.value = await fetchAdminUploads()
+  } catch (error) {
+    uploadsError.value = error.message ?? 'Failed to load user uploads'
+  } finally {
+    uploadsLoading.value = false
+  }
+}
+
+async function softDeleteUpload(upload) {
+  const confirmed = window.confirm(`Mark "${upload.fileName}" for deletion?`)
+  if (!confirmed) return
+
+  deletingUploadId.value = upload.id
+  uploadsError.value = ''
+  try {
+    await softDeleteImage(upload.id)
+    await loadUserUploads()
+  } catch (error) {
+    uploadsError.value = error.message ?? 'Failed to delete upload'
+  } finally {
+    deletingUploadId.value = null
   }
 }
 
@@ -680,7 +998,7 @@ function formatFeedbackDate(value) {
 
 onMounted(async () => {
   await loadUsers()
-  await Promise.all([loadAdminFeedback(), loadFinetuneRuns()])
+  await Promise.all([loadAdminFeedback(), loadFinetuneRuns(), loadUserUploads()])
   startReembedPolling()
 })
 

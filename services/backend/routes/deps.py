@@ -24,7 +24,7 @@ def get_current_user(
     if user_id is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     user = session.get(User, int(user_id))
-    if not user or not user.is_active:
+    if not user or not user.is_active or user.toBeDeleted:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
     return user
 
