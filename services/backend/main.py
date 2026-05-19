@@ -46,6 +46,7 @@ async def lifespan(app: FastAPI):
     # ── startup ──────────────────────────────
     SQLModel.metadata.create_all(engine)
     _migrate_images_user_id()
+    _migrate_images_patches()
     _migrate_user_bookmarks()
     _migrate_soft_delete_columns()
     _migrate_finetune_runs()
@@ -53,6 +54,7 @@ async def lifespan(app: FastAPI):
         finetune_job.recover_interrupted_runs(session)
     _seed_images()
     _seed_patches()
+    _backfill_image_patch_ids()
     _seed_admin()
     _backfill_known_uploaded_image()
     scheduler_task = asyncio.create_task(_finetune_scheduler_loop())
@@ -129,6 +131,15 @@ def _migrate_images_user_id():
         connection.execute(text('CREATE INDEX IF NOT EXISTS "ix_images_userId" ON images ("userId")'))
 
 
+def _migrate_images_patches():
+    with engine.begin() as connection:
+        columns = connection.execute(text("PRAGMA table_info(images)")).fetchall()
+        column_names = {column[1] for column in columns}
+
+        if "patches" not in column_names:
+            connection.execute(text('ALTER TABLE images ADD COLUMN "patches" JSON'))
+
+
 def _migrate_user_bookmarks():
     with engine.begin() as connection:
         columns = connection.execute(text("PRAGMA table_info(users)")).fetchall()
@@ -181,6 +192,30 @@ def _seed_patches():
                     ))
         session.add_all(patches)
         session.commit()
+
+
+def _backfill_image_patch_ids():
+    with Session(engine) as session:
+        images = [image for image in session.exec(select(Image)).all() if image.patches is None]
+        if not images:
+            return
+
+        patches = session.exec(select(Patch).order_by(Patch.id)).all()
+        patch_ids_by_image_id: dict[int, list[int]] = {}
+        for patch in patches:
+            if patch.id is None:
+                continue
+            patch_ids_by_image_id.setdefault(patch.source_image_id, []).append(patch.id)
+
+        changed = False
+        for image in images:
+            if image.id in patch_ids_by_image_id:
+                image.patches = patch_ids_by_image_id[image.id]
+                session.add(image)
+                changed = True
+
+        if changed:
+            session.commit()
 
 
 def _seed_admin():
