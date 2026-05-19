@@ -22,9 +22,7 @@
 
     <div class="mt-3 flex items-center justify-center gap-2 text-[14px]">
       <span>{{ title }}</span>
-      <span class="flex h-5 w-5 items-center justify-center rounded-full border text-xs">
-        i
-      </span>
+      <span class="flex h-5 w-5 items-center justify-center rounded-full border text-xs"> i </span>
     </div>
   </aside>
 </template>

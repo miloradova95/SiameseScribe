@@ -52,7 +52,8 @@ const fileUrl = computed(() => getPatchFileUrl(props.patch.id))
   white-space: nowrap;
 }
 
-.group, .codex {
+.group,
+.codex {
   margin: 4px 0 0 0;
   font-size: 0.75rem;
   color: #666;

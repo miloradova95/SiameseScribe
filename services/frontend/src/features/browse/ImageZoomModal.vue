@@ -86,7 +86,7 @@ watch(
   () => props.open,
   (isOpen) => {
     if (isOpen) zoom.value = 1
-  }
+  },
 )
 
 function closeModal() {

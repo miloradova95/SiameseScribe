@@ -2,9 +2,7 @@
   <div class="space-y-8">
     <div class="flex items-start justify-between gap-4">
       <div>
-        <p class="text-xs uppercase tracking-[0.22em] text-[#b19382]">
-          Admin tools
-        </p>
+        <p class="text-xs uppercase tracking-[0.22em] text-[#b19382]">Admin tools</p>
         <h2 class="mt-3 text-3xl font-semibold text-[#5b4034]">
           Member management and model operations
         </h2>
@@ -41,9 +39,9 @@
       <button
         type="button"
         class="pb-3 text-sm font-semibold"
-        :class="activeTab === 'members'
-          ? 'border-b-2 border-[#5b4034] text-[#5b4034]'
-          : 'text-[#9a867c]'"
+        :class="
+          activeTab === 'members' ? 'border-b-2 border-[#5b4034] text-[#5b4034]' : 'text-[#9a867c]'
+        "
         @click="activeTab = 'members'"
       >
         Members
@@ -52,9 +50,9 @@
       <button
         type="button"
         class="pb-3 text-sm font-semibold"
-        :class="activeTab === 'feedback'
-          ? 'border-b-2 border-[#5b4034] text-[#5b4034]'
-          : 'text-[#9a867c]'"
+        :class="
+          activeTab === 'feedback' ? 'border-b-2 border-[#5b4034] text-[#5b4034]' : 'text-[#9a867c]'
+        "
         @click="activeTab = 'feedback'"
       >
         Model Finetuning
@@ -66,9 +64,9 @@
       <button
         type="button"
         class="pb-3 text-sm font-semibold"
-        :class="activeTab === 'uploads'
-          ? 'border-b-2 border-[#5b4034] text-[#5b4034]'
-          : 'text-[#9a867c]'"
+        :class="
+          activeTab === 'uploads' ? 'border-b-2 border-[#5b4034] text-[#5b4034]' : 'text-[#9a867c]'
+        "
         @click="activeTab = 'uploads'"
       >
         User Uploads
@@ -80,9 +78,9 @@
       <button
         type="button"
         class="pb-3 text-sm font-semibold"
-        :class="activeTab === 'ml'
-          ? 'border-b-2 border-[#5b4034] text-[#5b4034]'
-          : 'text-[#9a867c]'"
+        :class="
+          activeTab === 'ml' ? 'border-b-2 border-[#5b4034] text-[#5b4034]' : 'text-[#9a867c]'
+        "
         @click="activeTab = 'ml'"
       >
         ML Runs
@@ -121,11 +119,16 @@
         <div>
           <span
             class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold"
-            :class="u.is_active
-              ? 'bg-[#dff5e3] text-[#2e7d32] ring-1 ring-[#2e7d32]/20'
-              : 'bg-[#f1e8e2] text-[#9a867c]'"
+            :class="
+              u.is_active
+                ? 'bg-[#dff5e3] text-[#2e7d32] ring-1 ring-[#2e7d32]/20'
+                : 'bg-[#f1e8e2] text-[#9a867c]'
+            "
           >
-            <span class="h-2 w-2 rounded-full" :class="u.is_active ? 'bg-[#2e7d32]' : 'bg-[#9a867c]'" />
+            <span
+              class="h-2 w-2 rounded-full"
+              :class="u.is_active ? 'bg-[#2e7d32]' : 'bg-[#9a867c]'"
+            />
             {{ u.is_active ? 'Active' : 'Deactivated' }}
           </span>
         </div>
@@ -177,8 +180,9 @@
       <div class="space-y-1 rounded-2xl bg-[#ead8b9]/60 px-5 py-4 text-sm text-[#5b4034]">
         <p class="font-semibold">Finetuning runs automatically.</p>
         <p class="text-[#8a756b]">
-          The scheduler checks for new unused feedback every 15 minutes (every 7 days for development) and starts a run
-          when at least one anchor patch has a "not similar" label. Use
+          The scheduler checks for new unused feedback every 15 minutes (every 7 days for
+          development) and starts a run when at least one anchor patch has a "not similar" label.
+          Use
           <span class="font-medium">Trigger Now</span> to run an immediate check without waiting.
           All runs are logged in the table below.
         </p>
@@ -198,9 +202,11 @@
           class="text-sm"
           :class="triggerResult.status === 'triggered' ? 'text-green-700' : 'text-[#8a756b]'"
         >
-          {{ triggerResult.status === 'triggered'
-            ? `Run #${triggerResult.run_id} queued.`
-            : `Skipped - ${triggerResult.reason}` }}
+          {{
+            triggerResult.status === 'triggered'
+              ? `Run #${triggerResult.run_id} queued.`
+              : `Skipped - ${triggerResult.reason}`
+          }}
         </p>
         <p v-if="triggerError" class="text-sm text-red-600">{{ triggerError }}</p>
       </div>
@@ -237,13 +243,16 @@
                 class="border-b border-[#eee5df] align-top"
               >
                 <td class="px-3 py-3 text-[#9a867c]">{{ run.id }}</td>
-                <td class="whitespace-nowrap px-3 py-3">{{ formatFeedbackDate(run.triggered_at) }}</td>
+                <td class="whitespace-nowrap px-3 py-3">
+                  {{ formatFeedbackDate(run.triggered_at) }}
+                </td>
                 <td class="px-3 py-3 capitalize">{{ run.trigger_source }}</td>
                 <td class="px-3 py-3">
                   <span
                     class="rounded-full px-2 py-0.5 text-xs font-medium"
                     :class="{
-                      'bg-yellow-100 text-yellow-800': run.status === 'pending' || run.status === 'running',
+                      'bg-yellow-100 text-yellow-800':
+                        run.status === 'pending' || run.status === 'running',
                       'bg-green-100 text-green-800': run.status === 'completed',
                       'bg-red-100 text-red-800': run.status === 'failed',
                     }"
@@ -256,7 +265,9 @@
                   <span class="block text-[10px]">real / aug / pairs</span>
                 </td>
                 <td class="px-3 py-3">{{ run.triplets_used }}</td>
-                <td class="px-3 py-3 font-mono text-xs text-[#9a867c]">{{ run.mlflow_run_id?.slice(0, 8) ?? '-' }}</td>
+                <td class="px-3 py-3 font-mono text-xs text-[#9a867c]">
+                  {{ run.mlflow_run_id?.slice(0, 8) ?? '-' }}
+                </td>
                 <td class="break-all px-3 py-3 text-xs text-red-600">{{ run.error_msg ?? '' }}</td>
               </tr>
               <tr v-if="!finetuneRuns.length">
@@ -339,10 +350,14 @@
                 :key="item.id"
                 class="border-b border-[#eee5df] align-top"
               >
-                <td class="whitespace-nowrap px-3 py-4">{{ formatFeedbackDate(item.created_at) }}</td>
+                <td class="whitespace-nowrap px-3 py-4">
+                  {{ formatFeedbackDate(item.created_at) }}
+                </td>
                 <td class="px-3 py-4">
                   <div class="font-semibold text-[#5b4034]">{{ item.username }}</div>
-                  <div class="text-xs text-[#9a867c]">#{{ item.user_id }} - {{ item.user_email }}</div>
+                  <div class="text-xs text-[#9a867c]">
+                    #{{ item.user_id }} - {{ item.user_email }}
+                  </div>
                 </td>
                 <td class="px-3 py-4">{{ item.label }}</td>
                 <td class="break-all px-3 py-4">{{ item.query_patch_file_name }}</td>
@@ -350,7 +365,11 @@
                 <td class="px-3 py-4">
                   <span
                     class="rounded-full px-2 py-0.5 text-xs"
-                    :class="item.used_for_retrain ? 'bg-green-100 text-green-800' : 'bg-[#ead8b9] text-[#8a756b]'"
+                    :class="
+                      item.used_for_retrain
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-[#ead8b9] text-[#8a756b]'
+                    "
                   >
                     {{ item.used_for_retrain ? 'yes' : 'pending' }}
                   </span>
@@ -409,14 +428,18 @@
               </td>
               <td class="px-3 py-4">
                 <div class="font-semibold text-[#5b4034]">{{ upload.username ?? 'Unknown' }}</div>
-                <div class="text-xs text-[#9a867c]">#{{ upload.userId ?? '-' }} - {{ upload.user_email ?? '-' }}</div>
+                <div class="text-xs text-[#9a867c]">
+                  #{{ upload.userId ?? '-' }} - {{ upload.user_email ?? '-' }}
+                </div>
               </td>
               <td class="px-3 py-4">{{ upload.group ?? '-' }}</td>
               <td class="px-3 py-4">{{ upload.patches?.length ?? 0 }}</td>
               <td class="px-3 py-4">
                 <span
                   class="rounded-full px-2 py-0.5 text-xs font-medium"
-                  :class="upload.toBeDeleted ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'"
+                  :class="
+                    upload.toBeDeleted ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                  "
                 >
                   {{ upload.toBeDeleted ? 'Pending deletion' : 'Active' }}
                 </span>
@@ -428,7 +451,13 @@
                   :disabled="upload.toBeDeleted || deletingUploadId === upload.id"
                   @click="softDeleteUpload(upload)"
                 >
-                  {{ deletingUploadId === upload.id ? 'Deleting...' : upload.toBeDeleted ? 'Deleted' : 'Delete' }}
+                  {{
+                    deletingUploadId === upload.id
+                      ? 'Deleting...'
+                      : upload.toBeDeleted
+                        ? 'Deleted'
+                        : 'Delete'
+                  }}
                 </button>
               </td>
             </tr>
@@ -458,13 +487,20 @@
           </span>
         </div>
         <div v-if="reembedStatus.in_progress" class="text-sm text-[#8a756b]">
-          Started: {{ reembedStatus.started_at ? formatFeedbackDate(reembedStatus.started_at) : '-' }}
+          Started:
+          {{ reembedStatus.started_at ? formatFeedbackDate(reembedStatus.started_at) : '-' }}
         </div>
-        <div v-if="!reembedStatus.in_progress && reembedStatus.completed_at" class="text-sm text-[#8a756b]">
+        <div
+          v-if="!reembedStatus.in_progress && reembedStatus.completed_at"
+          class="text-sm text-[#8a756b]"
+        >
           Last completed: {{ formatFeedbackDate(reembedStatus.completed_at) }}
-          <span v-if="reembedStatus.eval_precision_at_k != null" class="ml-3 font-medium text-[#5b4034]">
-            P@5 {{ (reembedStatus.eval_precision_at_k * 100).toFixed(1) }}%
-            · mAP {{ (reembedStatus.eval_mAP * 100).toFixed(1) }}%
+          <span
+            v-if="reembedStatus.eval_precision_at_k != null"
+            class="ml-3 font-medium text-[#5b4034]"
+          >
+            P@5 {{ (reembedStatus.eval_precision_at_k * 100).toFixed(1) }}% · mAP
+            {{ (reembedStatus.eval_mAP * 100).toFixed(1) }}%
           </span>
         </div>
         <a
@@ -504,15 +540,26 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="run in finetuneRuns" :key="run.id" class="border-b border-[#eee5df] align-top">
+              <tr
+                v-for="run in finetuneRuns"
+                :key="run.id"
+                class="border-b border-[#eee5df] align-top"
+              >
                 <td class="px-3 py-3 text-[#9a867c]">{{ run.id }}</td>
-                <td class="whitespace-nowrap px-3 py-3">{{ formatFeedbackDate(run.triggered_at) }}</td>
+                <td class="whitespace-nowrap px-3 py-3">
+                  {{ formatFeedbackDate(run.triggered_at) }}
+                </td>
                 <td class="px-3 py-3 capitalize">{{ run.trigger_source }}</td>
                 <td class="px-3 py-3">
                   <span
                     class="rounded-full px-2 py-0.5 text-xs font-medium"
                     :class="{
-                      'bg-yellow-100 text-yellow-800': ['pending', 'running', 'reembedding', 'evaluating'].includes(run.status),
+                      'bg-yellow-100 text-yellow-800': [
+                        'pending',
+                        'running',
+                        'reembedding',
+                        'evaluating',
+                      ].includes(run.status),
                       'bg-green-100 text-green-800': run.status === 'completed',
                       'bg-red-100 text-red-800': run.status === 'failed',
                     }"
@@ -525,7 +572,11 @@
                 </td>
                 <td class="px-3 py-3">{{ run.triplets_used }}</td>
                 <td class="px-3 py-3">
-                  {{ run.eval_precision_at_k != null ? (run.eval_precision_at_k * 100).toFixed(1) + '%' : '-' }}
+                  {{
+                    run.eval_precision_at_k != null
+                      ? (run.eval_precision_at_k * 100).toFixed(1) + '%'
+                      : '-'
+                  }}
                 </td>
                 <td class="px-3 py-3">
                   {{ run.eval_mAP != null ? (run.eval_mAP * 100).toFixed(1) + '%' : '-' }}
@@ -576,7 +627,9 @@
 
           <div v-if="deletePreview" class="space-y-6">
             <div class="grid gap-3 sm:grid-cols-2">
-              <label class="flex items-start gap-3 rounded-xl border border-[#ded2ca] bg-white/70 p-4">
+              <label
+                class="flex items-start gap-3 rounded-xl border border-[#ded2ca] bg-white/70 p-4"
+              >
                 <input
                   v-model="deleteUploads"
                   type="checkbox"
@@ -585,12 +638,17 @@
                 <span>
                   <span class="block text-sm font-semibold text-[#5b4034]">Delete uploads</span>
                   <span class="block text-xs text-[#8a756b]">
-                    Mark {{ deletePreview.uploads.length }} upload{{ deletePreview.uploads.length === 1 ? '' : 's' }} for deletion.
+                    Mark {{ deletePreview.uploads.length }} upload{{
+                      deletePreview.uploads.length === 1 ? '' : 's'
+                    }}
+                    for deletion.
                   </span>
                 </span>
               </label>
 
-              <label class="flex items-start gap-3 rounded-xl border border-[#ded2ca] bg-white/70 p-4">
+              <label
+                class="flex items-start gap-3 rounded-xl border border-[#ded2ca] bg-white/70 p-4"
+              >
                 <input
                   v-model="deleteFeedback"
                   type="checkbox"
@@ -599,7 +657,10 @@
                 <span>
                   <span class="block text-sm font-semibold text-[#5b4034]">Delete feedback</span>
                   <span class="block text-xs text-[#8a756b]">
-                    Mark {{ deletePreview.feedback.length }} feedback item{{ deletePreview.feedback.length === 1 ? '' : 's' }} for deletion.
+                    Mark {{ deletePreview.feedback.length }} feedback item{{
+                      deletePreview.feedback.length === 1 ? '' : 's'
+                    }}
+                    for deletion.
                   </span>
                 </span>
               </label>
@@ -618,11 +679,17 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="upload in deletePreview.uploads" :key="upload.id" class="border-t border-[#eee5df]">
+                    <tr
+                      v-for="upload in deletePreview.uploads"
+                      :key="upload.id"
+                      class="border-t border-[#eee5df]"
+                    >
                       <td class="px-3 py-3 text-[#9a867c]">{{ upload.id }}</td>
                       <td class="break-all px-3 py-3">{{ upload.fileName }}</td>
                       <td class="px-3 py-3">{{ upload.group ?? '-' }}</td>
-                      <td class="px-3 py-3">{{ upload.toBeDeleted ? 'Pending deletion' : 'Active' }}</td>
+                      <td class="px-3 py-3">
+                        {{ upload.toBeDeleted ? 'Pending deletion' : 'Active' }}
+                      </td>
                     </tr>
                     <tr v-if="!deletePreview.uploads.length">
                       <td colspan="4" class="py-6 text-center text-[#9a867c]">No uploads found.</td>
@@ -646,15 +713,25 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="item in deletePreview.feedback" :key="item.id" class="border-t border-[#eee5df] align-top">
-                      <td class="whitespace-nowrap px-3 py-3">{{ formatFeedbackDate(item.created_at) }}</td>
+                    <tr
+                      v-for="item in deletePreview.feedback"
+                      :key="item.id"
+                      class="border-t border-[#eee5df] align-top"
+                    >
+                      <td class="whitespace-nowrap px-3 py-3">
+                        {{ formatFeedbackDate(item.created_at) }}
+                      </td>
                       <td class="px-3 py-3">{{ item.label }}</td>
                       <td class="break-all px-3 py-3">{{ item.query_patch_file_name }}</td>
                       <td class="break-all px-3 py-3">{{ item.result_patch_file_name }}</td>
-                      <td class="px-3 py-3">{{ item.toBeDeleted ? 'Pending deletion' : 'Active' }}</td>
+                      <td class="px-3 py-3">
+                        {{ item.toBeDeleted ? 'Pending deletion' : 'Active' }}
+                      </td>
                     </tr>
                     <tr v-if="!deletePreview.feedback.length">
-                      <td colspan="5" class="py-6 text-center text-[#9a867c]">No feedback found.</td>
+                      <td colspan="5" class="py-6 text-center text-[#9a867c]">
+                        No feedback found.
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -683,7 +760,11 @@
       </div>
     </div>
 
-    <CreateUserModal :open="showCreateUser" @close="showCreateUser = false" @create="handleCreateUser" />
+    <CreateUserModal
+      :open="showCreateUser"
+      @close="showCreateUser = false"
+      @create="handleCreateUser"
+    />
   </div>
 </template>
 
@@ -692,7 +773,12 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { fetchWithAuth, apiUrl } from '@/lib/api'
 import { formatLocalDateTime, localDateEndToUtcIso, localDateStartToUtcIso } from '@/lib/date'
-import { fetchAdminFeedback, triggerFinetuneRun, fetchFinetuneRuns, fetchReembedStatus } from '@/services/patch-service'
+import {
+  fetchAdminFeedback,
+  triggerFinetuneRun,
+  fetchFinetuneRuns,
+  fetchReembedStatus,
+} from '@/services/patch-service'
 import { fetchAdminUploads, softDeleteImage } from '@/services/image-service'
 import PlusIcon from '@/components/PlusIcon.vue'
 import CreateUserModal from '@/features/admin/CreateUserModal.vue'
@@ -973,9 +1059,9 @@ function resetFeedbackFilters() {
 async function triggerNow() {
   const confirmed = window.confirm(
     'Start a finetune run now?\n\n' +
-    'After training completes, all patches will be re-embedded with the new model weights. ' +
-    'This can take significant time (potentially hours) depending on dataset size. ' +
-    'Search results will remain available throughout.'
+      'After training completes, all patches will be re-embedded with the new model weights. ' +
+      'This can take significant time (potentially hours) depending on dataset size. ' +
+      'Search results will remain available throughout.',
   )
   if (!confirmed) return
 

@@ -14,10 +14,7 @@
       No Images found.
     </div>
 
-    <div
-      v-else
-      class="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4"
-    >
+    <div v-else class="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
       <ImageCard
         v-for="img in images"
         :key="img.id"

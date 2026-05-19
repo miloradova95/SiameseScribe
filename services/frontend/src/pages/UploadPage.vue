@@ -2,7 +2,7 @@
   <div class="relative min-h-screen overflow-hidden bg-brand-bg font-body text-brand-text">
     <div
       class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.06]"
-      style="background-image: url('/ornament-bg.png');"
+      style="background-image: url('/ornament-bg.png')"
     ></div>
 
     <main class="mx-auto flex max-w-6xl flex-col items-center px-6 pb-20 pt-6 text-center md:pt-10">
@@ -59,20 +59,13 @@
 
           <div v-if="localPreview" class="mt-8 w-full max-w-xl">
             <div class="overflow-hidden rounded-2xl border border-brand-line bg-white shadow-sm">
-              <img
-                :src="localPreview"
-                alt="preview"
-                class="max-h-[320px] w-full object-cover"
-              />
+              <img :src="localPreview" alt="preview" class="max-h-[320px] w-full object-cover" />
             </div>
           </div>
         </label>
 
         <div class="mt-8 w-full max-w-md text-left">
-          <label
-            for="group-input"
-            class="mb-2 block text-sm font-medium text-[#5a4a42]"
-          >
+          <label for="group-input" class="mb-2 block text-sm font-medium text-[#5a4a42]">
             Group <span class="text-[#9b8e86]">(optional)</span>
           </label>
 

@@ -6,7 +6,6 @@
       @click.self="$emit('close')"
     >
       <div class="w-full max-w-2xl rounded-3xl bg-[#fbfaf8] p-6 shadow-2xl">
-        
         <!-- Header -->
         <div class="mb-5 flex items-center justify-between">
           <div>
@@ -24,7 +23,6 @@
 
         <!-- Form -->
         <form @submit.prevent="submit" class="grid gap-4">
-          
           <input
             v-model="localForm.username"
             placeholder="Username"
@@ -69,7 +67,6 @@
               Create
             </button>
           </div>
-
         </form>
       </div>
     </div>
@@ -80,7 +77,7 @@
 import { ref } from 'vue'
 
 const props = defineProps({
-  open: Boolean
+  open: Boolean,
 })
 
 const emit = defineEmits(['close', 'create'])
@@ -89,7 +86,7 @@ const localForm = ref({
   username: '',
   email: '',
   password: '',
-  role: 'user'
+  role: 'user',
 })
 
 function submit() {
@@ -98,7 +95,7 @@ function submit() {
     username: '',
     email: '',
     password: '',
-    role: 'user'
+    role: 'user',
   }
 }
 </script>

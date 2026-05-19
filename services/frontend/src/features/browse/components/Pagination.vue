@@ -1,9 +1,5 @@
 <template>
-  <div
-    v-if="totalPages > 1"
-    class="mt-10 flex items-center justify-center gap-6 text-[15px]"
-  >
-  
+  <div v-if="totalPages > 1" class="mt-10 flex items-center justify-center gap-6 text-[15px]">
     <button
       class="px-3 py-1 rounded-full transition hover:bg-[#eee7e2] disabled:opacity-30"
       :disabled="currentPage === 1"
@@ -33,10 +29,7 @@
       ›
     </button>
 
-    <form
-      class="ml-4 flex items-center gap-2"
-      @submit.prevent="submitPageJump"
-    >
+    <form class="ml-4 flex items-center gap-2" @submit.prevent="submitPageJump">
       <span class="text-sm text-[#8a7568]">Go to</span>
 
       <input
@@ -73,14 +66,11 @@ watch(
   () => props.currentPage,
   (page) => {
     pageInput.value = page
-  }
+  },
 )
 
 function submitPageJump() {
-  const page = Math.min(
-    Math.max(Number(pageInput.value), 1),
-    props.totalPages
-  )
+  const page = Math.min(Math.max(Number(pageInput.value), 1), props.totalPages)
   emit('change', page)
 }
 

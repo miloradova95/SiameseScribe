@@ -60,7 +60,7 @@ async function toggleBookmark() {
             message: 'Bookmark removed.',
             type: 'success',
           },
-        })
+        }),
       )
     } else {
       bookmarks.value = await addBookmark(props.item.id)
@@ -71,7 +71,7 @@ async function toggleBookmark() {
             message: 'Image bookmarked.',
             type: 'success',
           },
-        })
+        }),
       )
     }
   } catch (error) {
@@ -82,7 +82,7 @@ async function toggleBookmark() {
           message: error.message || 'Failed to update bookmark.',
           type: 'error',
         },
-      })
+      }),
     )
   } finally {
     bookmarkSaving.value = false
@@ -106,6 +106,6 @@ function handleBookmarksUpdated(event) {
 
 watch(
   () => props.item?.id,
-  () => readBookmarks()
+  () => readBookmarks(),
 )
 </script>

@@ -4,17 +4,11 @@
       <section class="mt-6 border-b border-[#ddd3ca] pb-6">
         <div class="relative flex items-center justify-center">
           <div class="flex items-center gap-5 text-[18px]">
-            <button class="text-[#c3b7ad] transition hover:text-[#8b6b59]">
-              Pages
-            </button>
+            <button class="text-[#c3b7ad] transition hover:text-[#8b6b59]">Pages</button>
             <span class="text-[#d0c5bc]">|</span>
-            <button class="font-medium text-[#6c4f3d]">
-              Pen Flourishes
-            </button>
+            <button class="font-medium text-[#6c4f3d]">Pen Flourishes</button>
             <span class="text-[#d0c5bc]">|</span>
-            <button class="text-[#c3b7ad] transition hover:text-[#8b6b59]">
-              Patches
-            </button>
+            <button class="text-[#c3b7ad] transition hover:text-[#8b6b59]">Patches</button>
           </div>
 
           <div class="absolute right-0 flex items-center gap-10 text-[17px]">
@@ -45,7 +39,7 @@
             :loading="initialLoading"
             :annotated-image-ids="annotatedImageIds"
             @select="selectImage"
-          />    
+          />
         </div>
 
         <BrowseInspector
@@ -55,12 +49,12 @@
           @zoom="openZoom"
         />
       </section>
-           <Pagination
-            :current-page="currentPage"
-            :total-pages="totalPages"
-            :page-size="pageSize"
-            @change="goToPage"
-          /> 
+      <Pagination
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        :page-size="pageSize"
+        @change="goToPage"
+      />
     </main>
 
     <Teleport to="body">
@@ -162,7 +156,6 @@ async function goToPage(page) {
     await selectImage(paginatedImages.value[0])
   }
 }
-
 
 async function loadAllImages() {
   initialLoading.value = true

@@ -1,8 +1,5 @@
 <template>
-  <div
-    ref="imageWrapRef"
-    class="relative h-[610px] overflow-hidden rounded-[14px] bg-[#ebe3db]"
-  >
+  <div ref="imageWrapRef" class="relative h-[610px] overflow-hidden rounded-[14px] bg-[#ebe3db]">
     <img
       ref="mainImgRef"
       :src="imageSrc"
@@ -36,7 +33,7 @@
         patchIsAnnotated(patch) ? 'hover:bg-transparent' : 'hover:bg-[#b600ff]/10',
         selectedPatchId === patch.id
           ? 'z-50 bg-[#b600ff]/20 outline outline-2 outline-[#b600ff] outline-offset-[-1px]'
-          : 'z-20'
+          : 'z-20',
       ]"
       :style="patchBoxStyle(patch)"
       @click="$emit('select', patch)"

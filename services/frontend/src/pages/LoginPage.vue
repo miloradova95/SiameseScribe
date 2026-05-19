@@ -1,27 +1,19 @@
 <template>
   <div class="min-h-screen bg-[#f7f1eb] flex items-center text-[#5b4033]">
-    
     <div class="mx-auto w-full max-w-[1400px] px-16 grid grid-cols-[1fr_420px] items-center gap-20">
-      
       <section>
-        <h1
-          class="font-display text-[96px] font-medium uppercase leading-none tracking-[0.08em]"
-        >
+        <h1 class="font-display text-[96px] font-medium uppercase leading-none tracking-[0.08em]">
           PEU A FLEU
         </h1>
 
         <p class="mt-6 max-w-[620px] text-[24px] leading-snug">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-          Phasellus pretium ex vitae ipsum egestas,
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus pretium ex vitae ipsum
+          egestas,
         </p>
       </section>
 
-
-      <section
-        class="rounded-[30px] bg-[#5b4033] px-12 py-14 text-[#fbf8f5] shadow-xl"
-      >
+      <section class="rounded-[30px] bg-[#5b4033] px-12 py-14 text-[#fbf8f5] shadow-xl">
         <form @submit.prevent="submit">
-
           <div class="mb-5">
             <label class="mb-2 block text-[18px]">Username</label>
             <input
@@ -66,10 +58,8 @@
             and
             <a href="#" class="text-[#4db7ff] hover:underline">Privacy Policy</a>
           </p>
-
         </form>
       </section>
-
     </div>
   </div>
 </template>

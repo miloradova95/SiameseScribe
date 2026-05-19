@@ -1,24 +1,20 @@
 <template>
   <section class="w-full">
     <div class="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-      <div v-if="!image" class="text-sm text-zinc-500">
-        No image selected.
-      </div>
+      <div v-if="!image" class="text-sm text-zinc-500">No image selected.</div>
 
       <div v-else class="space-y-4">
         <div class="flex items-center justify-between gap-4">
           <div class="text-left">
             <h2 class="text-lg font-semibold">{{ image.filename }}</h2>
-            <p class="text-sm text-zinc-500">
-              {{ patches.length }} patches
-            </p>
+            <p class="text-sm text-zinc-500">{{ patches.length }} patches</p>
           </div>
         </div>
 
         <div
           ref="viewerRef"
           class="relative mx-auto w-full overflow-auto rounded-xl border bg-zinc-50"
-          style="max-height: 75vh;"
+          style="max-height: 75vh"
         >
           <img
             ref="imgRef"
@@ -32,9 +28,11 @@
             v-for="patch in visiblePatches"
             :key="patch.source_image_id + '-' + patch.patch_filename"
             class="absolute cursor-pointer border transition"
-            :class="isSelected(patch)
-              ? 'border-red-500 bg-red-500/20'
-              : 'border-sky-500 bg-sky-500/10 hover:bg-sky-500/20'"
+            :class="
+              isSelected(patch)
+                ? 'border-red-500 bg-red-500/20'
+                : 'border-sky-500 bg-sky-500/10 hover:bg-sky-500/20'
+            "
             :style="patchStyle(patch)"
             @click="selectPatch(patch)"
             :title="`${patch.patch_filename} (${patch.x}, ${patch.y})`"
@@ -56,7 +54,7 @@ const props = defineProps({
   image: { type: Object, default: null },
   patches: { type: Array, default: () => [] },
   patchLoading: { type: Boolean, default: false },
-  selectedPatch: { type: Object, default: null }
+  selectedPatch: { type: Object, default: null },
 })
 
 const emit = defineEmits(['select-patch'])
@@ -90,7 +88,7 @@ function patchStyle(patch) {
     left: `${patch.x * scaleX.value}px`,
     top: `${patch.y * scaleY.value}px`,
     width: `${PATCH_SIZE * scaleX.value}px`,
-    height: `${PATCH_SIZE * scaleY.value}px`
+    height: `${PATCH_SIZE * scaleY.value}px`,
   }
 }
 

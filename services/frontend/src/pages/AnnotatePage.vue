@@ -94,7 +94,9 @@
             </div>
 
             <div>
-              <p class="mb-3 text-[13px] font-semibold">{{ isManuallySelectedResult ? 'Selected Result' : 'Best Match' }}</p>
+              <p class="mb-3 text-[13px] font-semibold">
+                {{ isManuallySelectedResult ? 'Selected Result' : 'Best Match' }}
+              </p>
 
               <button
                 type="button"
@@ -102,10 +104,7 @@
                 :disabled="!bestMatch"
                 @click="openPatch(bestMatch)"
               >
-                <AnnotatedBadge
-                  v-if="patchHasFeedbackWithSelected(bestMatch)"
-                  size="md"
-                />
+                <AnnotatedBadge v-if="patchHasFeedbackWithSelected(bestMatch)" size="md" />
                 <img
                   :src="
                     heatmapOnBestMatch && bestMatch?.heatmapSrc

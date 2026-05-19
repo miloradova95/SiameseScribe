@@ -6,7 +6,6 @@
     @click="$emit('click')"
   >
     <div class="relative aspect-[4/5] overflow-hidden bg-brand-surface">
-      
       <!-- ✅ Bookmark Button -->
       <div class="absolute top-2 right-2 z-10">
         <BookmarkButton :item="image" />
@@ -25,9 +24,7 @@
       <p class="truncate text-sm font-medium text-brand-text">
         {{ image.fileName }}
       </p>
-      <p class="mt-1 text-xs text-brand-subtle">
-        Group: {{ image.group || '—' }}
-      </p>
+      <p class="mt-1 text-xs text-brand-subtle">Group: {{ image.group || '—' }}</p>
     </div>
   </button>
 </template>

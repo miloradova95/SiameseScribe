@@ -77,7 +77,11 @@
                   <div class="mb-3 flex items-center gap-3">
                     <span
                       class="rounded-full px-3 py-1 text-sm font-semibold"
-                      :class="item.label === 'similar' ? 'bg-[#ddebdc] text-[#315b2c]' : 'bg-[#f3dfdc] text-[#8f3a2b]'"
+                      :class="
+                        item.label === 'similar'
+                          ? 'bg-[#ddebdc] text-[#315b2c]'
+                          : 'bg-[#f3dfdc] text-[#8f3a2b]'
+                      "
                     >
                       {{ item.label === 'similar' ? 'Similar' : 'Not Similar' }}
                     </span>
@@ -105,30 +109,25 @@
               </article>
             </div>
 
-            <p v-else class="text-lg text-[#8a7568]">
-              You have not saved any feedback yet.
-            </p>
+            <p v-else class="text-lg text-[#8a7568]">You have not saved any feedback yet.</p>
           </template>
 
           <template v-else-if="activeTab === 'uploads'">
             <div class="mb-8 rounded-[28px] border border-[#d7cec7] bg-white/55 px-6 py-6">
-              <p class="text-xs uppercase tracking-[0.22em] text-[#b19382]">
-                Personal archive
-              </p>
+              <p class="text-xs uppercase tracking-[0.22em] text-[#b19382]">Personal archive</p>
               <div class="mt-3 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div>
                   <h2 class="text-3xl font-semibold text-[#5b4033]">
                     Your uploaded manuscript images
                   </h2>
                   <p class="mt-2 max-w-2xl text-base text-[#8a7568]">
-                    Images uploaded while signed in are collected here so you can jump back into browsing and annotation quickly.
+                    Images uploaded while signed in are collected here so you can jump back into
+                    browsing and annotation quickly.
                   </p>
                 </div>
 
                 <div class="rounded-2xl border border-[#dbcfc7] bg-[#f7f1eb] px-5 py-4 text-right">
-                  <p class="text-xs uppercase tracking-[0.18em] text-[#b19382]">
-                    Total uploads
-                  </p>
+                  <p class="text-xs uppercase tracking-[0.18em] text-[#b19382]">Total uploads</p>
                   <p class="mt-1 text-3xl font-semibold text-[#5b4033]">
                     {{ myUploads.length }}
                   </p>
@@ -160,9 +159,7 @@
               v-else
               class="rounded-[28px] border border-dashed border-[#d7cec7] bg-white/30 px-8 py-12 text-center"
             >
-              <p class="text-2xl font-semibold text-[#5b4033]">
-                No uploads yet
-              </p>
+              <p class="text-2xl font-semibold text-[#5b4033]">No uploads yet</p>
               <p class="mt-3 text-lg text-[#8a7568]">
                 Upload an image and it will appear here automatically.
               </p>
@@ -188,9 +185,7 @@
               />
             </div>
 
-            <p v-else class="text-lg text-[#8a7568]">
-              No bookmarked images yet.
-            </p>
+            <p v-else class="text-lg text-[#8a7568]">No bookmarked images yet.</p>
           </template>
 
           <template v-else-if="activeTab === 'admin' && authStore.isAdmin">
@@ -333,7 +328,7 @@ watch(
     if (activeTab.value !== nextTab) {
       activeTab.value = nextTab
     }
-  }
+  },
 )
 
 watch(
@@ -342,7 +337,7 @@ watch(
     if (!isAdmin && activeTab.value === 'admin') {
       activeTab.value = 'feedback'
     }
-  }
+  },
 )
 
 watch(
@@ -351,6 +346,6 @@ watch(
     clearBookmarkCache()
     loadBookmarks(true)
   },
-  { immediate: true }
+  { immediate: true },
 )
 </script>
