@@ -258,11 +258,10 @@
             <div class="mb-5 flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <h2 class="text-[16px]">Other similar patches</h2>
-                <span
-                  class="flex h-5 w-5 items-center justify-center rounded-full border border-[#6c4f3d] text-xs"
-                >
-                  i
-                </span>
+                <InfoTooltip
+                  text="Name of the peua flourish"
+                  position="right"
+                />
               </div>
 
               <div class="flex items-center gap-3 text-[13px]">
