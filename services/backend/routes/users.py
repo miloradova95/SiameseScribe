@@ -3,7 +3,8 @@ from sqlmodel import Session, select, or_
 from sqlalchemy import func
 
 from services.backend.routes.deps import get_session, get_current_user, require_admin
-from services.backend.schemas.auth import UserCreate, UserResponse
+from services.backend.schemas.auth import UserCreate, UserDeletionPreview, UserResponse, UserSoftDeleteRequest
+from services.backend.services import feedback_service, image_service
 from services.backend.services.auth_service import hash_password
 from services.backend.sqlDB.images import Image
 from services.backend.sqlDB.users import User
@@ -51,6 +52,53 @@ def list_users(
     _: User = Depends(require_admin),
 ):
     return session.exec(select(User)).all()
+
+
+@router.get("/{user_id}/delete-preview", response_model=UserDeletionPreview)
+def get_user_delete_preview(
+    user_id: int,
+    session: Session = Depends(get_session),
+    _: User = Depends(require_admin),
+):
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    return {
+        "user": user,
+        "uploads": image_service.get_by_user_id(session, user_id, include_deleted=True),
+        "feedback": feedback_service.list_feedback_for_user_id(session, user_id),
+    }
+
+
+@router.patch("/{user_id}/soft-delete", response_model=UserDeletionPreview)
+def soft_delete_user(
+    user_id: int,
+    payload: UserSoftDeleteRequest,
+    session: Session = Depends(get_session),
+    current_admin: User = Depends(require_admin),
+):
+    user = session.get(User, user_id)
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if user.id == current_admin.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete yourself")
+
+    user.toBeDeleted = 1
+    user.is_active = False
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    if payload.delete_uploads:
+        image_service.soft_delete_by_user_id(session, user_id)
+
+    if payload.delete_feedback:
+        feedback_service.soft_delete_by_user_id(session, user_id)
+
+    return get_user_delete_preview(user_id=user_id, session=session)
 
 
 @router.get("/{user_id}/bookmarks", response_model=list[Image])
@@ -167,15 +215,6 @@ def delete_user(
     session: Session = Depends(get_session),
     current_admin: User = Depends(require_admin),
 ):
-    user = session.get(User, user_id)
-
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-
-    if user.id == current_admin.id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete yourself")
-
-    session.delete(user)
-    session.commit()
-
-    return {"detail": "User deleted"}
+    payload = UserSoftDeleteRequest()
+    soft_delete_user(user_id=user_id, payload=payload, session=session, current_admin=current_admin)
+    return {"detail": "User marked for deletion"}

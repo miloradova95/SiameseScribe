@@ -33,6 +33,7 @@ class FeedbackListItem(BaseModel):
     label: FeedbackLabel
     created_at: datetime
     used_for_retrain: bool
+    toBeDeleted: int = 0
 
     @field_validator("created_at", mode="before")
     @classmethod

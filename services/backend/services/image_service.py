@@ -10,6 +10,8 @@ from fastapi import UploadFile
 from sqlmodel import Session, select
 from services.backend.sqlDB.images import Image
 from services.backend.sqlDB.patches import Patch
+from services.backend.sqlDB.users import User
+from services.backend.schemas.images import AdminImageListItem
 from services.ML.app.chroma_client import get_chroma_client, get_or_create_collection
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -28,15 +30,45 @@ class UploadPipelineError(RuntimeError):
 
 
 def get_all(session: Session) -> list[Image]:
-    return session.exec(select(Image)).all()
+    return session.exec(select(Image).where(Image.toBeDeleted == 0)).all()
 
 
-def get_by_user_id(session: Session, user_id: int) -> list[Image]:
-    return session.exec(select(Image).where(Image.userId == user_id)).all()
+def get_admin_uploads(session: Session) -> list[AdminImageListItem]:
+    rows = session.exec(
+        select(Image, User)
+        .join(User, User.id == Image.userId)
+        .where(Image.userId.is_not(None))
+        .order_by(Image.id.desc())
+    ).all()
+
+    return [
+        AdminImageListItem(
+            id=image.id,
+            fileName=image.fileName,
+            filePath=image.filePath,
+            group=image.group,
+            userId=image.userId,
+            username=user.username,
+            user_email=user.email,
+            patches=image.patches,
+            toBeDeleted=image.toBeDeleted,
+        )
+        for image, user in rows
+    ]
+
+
+def get_by_user_id(session: Session, user_id: int, include_deleted: bool = False) -> list[Image]:
+    statement = select(Image).where(Image.userId == user_id)
+    if not include_deleted:
+        statement = statement.where(Image.toBeDeleted == 0)
+    return session.exec(statement).all()
 
 
 def get_by_id(session: Session, image_id: int) -> Image | None:
-    return session.get(Image, image_id)
+    image = session.get(Image, image_id)
+    if image and image.toBeDeleted:
+        return None
+    return image
 
 
 def get_id_by_filename(session: Session, file_name: str) -> int | None:
@@ -45,7 +77,7 @@ def get_id_by_filename(session: Session, file_name: str) -> int | None:
 
 
 def get_random(session: Session) -> Image | None:
-    all_ids = session.exec(select(Image.id)).all()
+    all_ids = session.exec(select(Image.id).where(Image.toBeDeleted == 0)).all()
     if not all_ids:
         return None
     return session.get(Image, _random.choice(all_ids))
@@ -59,6 +91,31 @@ def create(
     user_id: int | None = None,
 ) -> Image:
     image = Image(fileName=file_name, filePath=file_path, group=group, userId=user_id)
+    session.add(image)
+    session.commit()
+    session.refresh(image)
+    return image
+
+
+def soft_delete_by_user_id(session: Session, user_id: int) -> list[Image]:
+    images = get_by_user_id(session, user_id, include_deleted=True)
+    for image in images:
+        image.toBeDeleted = 1
+        session.add(image)
+    session.commit()
+
+    for image in images:
+        session.refresh(image)
+
+    return images
+
+
+def soft_delete(session: Session, image_id: int) -> Image | None:
+    image = session.get(Image, image_id)
+    if not image:
+        return None
+
+    image.toBeDeleted = 1
     session.add(image)
     session.commit()
     session.refresh(image)
