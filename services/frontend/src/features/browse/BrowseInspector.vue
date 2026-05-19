@@ -34,16 +34,13 @@
           <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#a08d80]">
             Source
           </p>
-          <div class="mt-2 flex items-center gap-3">
-            <p class="text-[22px] leading-tight text-[#6c4f3d]">
-              Database
-            </p>
-            <span
-              class="flex h-8 w-8 items-center justify-center rounded-full border border-[#b39d90] text-sm text-[#6c4f3d]"
-            >
-              i
-            </span>
-          </div>
+<div class="mt-2 flex items-center gap-3">
+  <p class="text-[22px] leading-tight text-[#6c4f3d]">Database</p>
+  <InfoTooltip
+    text="Database means this image was uploaded directly to the system."
+    position="right"
+  />
+</div>
         </div>
       </div>
 
@@ -80,6 +77,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { apiUrl } from '@/lib/api'
+import InfoTooltip from '@/components/InfoTooltip.vue'
 
 const props = defineProps({
   image: {
