@@ -1,10 +1,10 @@
 # .github/workflows/ci.yml
-name: CI – Build Check
+name: CI – Build & Health Check
 
 on:
-  push:
   pull_request:
     branches: [development, main]
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,3 +23,33 @@ jobs:
 
       - name: Build all services
         run: docker compose build
+
+      - name: Start all services
+        run: docker compose up -d
+
+      - name: Wait for backend
+        run: |
+          for i in {1..5}; do
+            curl -sf http://localhost:8000/docs && break
+            echo "Waiting for backend... ($i)"
+            sleep 5
+          done
+
+      - name: Wait for ML service
+        run: |
+          for i in {1..5}; do
+            curl -sf http://localhost:8001/docs && break
+            echo "Waiting for ML... ($i)"
+            sleep 5
+          done
+
+      - name: Check frontend
+        run: curl -f http://localhost:80
+
+      - name: Show container status
+        if: always()
+        run: docker compose ps
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
