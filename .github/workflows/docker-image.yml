@@ -1,0 +1,25 @@
+# .github/workflows/ci.yml
+name: CI – Build Check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create required data directory
+        run: mkdir -p data
+
+      - name: Create .env file
+        run: |
+          echo "SECRET_KEY=ci-test-key" >> .env
+          echo "ADMIN_USERNAME=admin" >> .env
+          echo "ADMIN_EMAIL=admin@test.local" >> .env
+          echo "ADMIN_PASSWORD=testpassword" >> .env
+
+      - name: Build all services
+        run: docker compose build
