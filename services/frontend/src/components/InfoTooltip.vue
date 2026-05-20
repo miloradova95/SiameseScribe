@@ -25,7 +25,7 @@ const props = defineProps({
   text: String,
   position: {
     type: String,
-    default: 'right', // 'right' | 'left' | 'top' | 'bottom'
+    default: 'right', 
   },
 })
 
@@ -42,7 +42,7 @@ function toggle() {
   open.value = !open.value
 }
 
-// Schließen bei Klick außerhalb
+
 function onClickOutside() {
   open.value = false
 }

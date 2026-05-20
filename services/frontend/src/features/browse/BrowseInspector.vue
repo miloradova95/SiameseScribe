@@ -16,7 +16,9 @@
           <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#a08d80]">
             Name
           </p>
-          <h2 class="mt-2 break-all text-[28px] font-semibold leading-tight text-[#6c4f3d]">
+          <h2
+            class="mt-2 break-all text-[28px] font-semibold leading-tight text-[#6c4f3d]"
+          >
             {{ image.fileName }}
           </h2>
         </div>
@@ -26,7 +28,7 @@
             Group
           </p>
           <p class="mt-2 text-[22px] leading-tight text-[#6c4f3d]">
-            {{ image.group || '—' }}
+            {{ image.group || "—" }}
           </p>
         </div>
 
@@ -34,19 +36,19 @@
           <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#a08d80]">
             Source
           </p>
-<div class="mt-2 flex items-center gap-3">
-  <p class="text-[22px] leading-tight text-[#6c4f3d]">Database</p>
-  <InfoTooltip
-    text="Database means this image was uploaded directly to the system."
-    position="right"
-  />
-</div>
+          <div class="mt-2 flex items-center gap-3">
+            <p class="text-[22px] leading-tight text-[#6c4f3d]">Database</p>
+            <InfoTooltip
+              text="Database means this image was uploaded directly to the system."
+              position="right"
+            />
+          </div>
         </div>
       </div>
 
       <div class="mt-4 border-t border-[#e2d8cf] pt-4">
         <div class="flex items-center justify-between gap-4">
-         <button
+          <button
             type="button"
             class="rounded-full border border-[#8a6755] px-5 py-3 text-[15px] text-[#6c4f3d] transition hover:bg-[#f4ede7]"
             @click="emit('zoom')"
@@ -58,7 +60,6 @@
             type="button"
             class="rounded-full bg-[#7b5a49] px-6 py-3 text-[15px] text-white transition hover:opacity-90"
             @click="goToAnnotate"
-
           >
             Annotate ›
           </button>
@@ -67,7 +68,9 @@
     </template>
 
     <template v-else>
-      <div class="flex min-h-[520px] items-center justify-center text-center text-[#a49285]">
+      <div
+        class="flex min-h-[520px] items-center justify-center text-center text-[#a49285]"
+      >
         Select one image.
       </div>
     </template>
@@ -75,22 +78,22 @@
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
-import { apiUrl } from '@/lib/api'
-import InfoTooltip from '@/components/InfoTooltip.vue'
+import { useRouter } from "vue-router";
+import { apiUrl } from "@/lib/api";
+import InfoTooltip from "@/components/InfoTooltip.vue";
 
 const props = defineProps({
   image: {
     type: Object,
     default: null,
   },
-})
+});
 
-const emit = defineEmits(['zoom'])
-const router = useRouter()
+const emit = defineEmits(["zoom"]);
+const router = useRouter();
 
 function goToAnnotate() {
-  if (!props.image?.fileName) return
-  router.push(`/browse/${encodeURIComponent(props.image.fileName)}`)
+  if (!props.image?.fileName) return;
+  router.push(`/browse/${encodeURIComponent(props.image.fileName)}`);
 }
 </script>
