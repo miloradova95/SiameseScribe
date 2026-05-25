@@ -188,6 +188,39 @@ with the correct `--mlflow_run_id` already filled in.
 
 ---
 
+## Step 5 — t-SNE Visualisation (optional, manual eval)
+
+Plots a 2D scatter of patch embeddings fetched directly from ChromaDB — no model
+inference needed, so run this any time after `Embedd.py`.
+
+```bash
+# Default: 2000 patches, coloured by scribal group (A–G+)
+python -m services.ML.app.services.Visualize_TSNE
+
+# More points, colour by codex instead
+python -m services.ML.app.services.Visualize_TSNE --n_samples 3000 --color_by codex
+
+# Adjust t-SNE perplexity, save without opening a window
+python -m services.ML.app.services.Visualize_TSNE --perplexity 50 --no_show
+```
+
+Output is saved to `data/models/eval_results/tsne_<group|codex>_<timestamp>.png`.
+
+If same-group patches form tight separate clusters the model is working well.
+Mixed/overlapping clusters indicate poor group separation.
+
+Optional arguments:
+
+| Argument | Default | Description |
+|---|---|---|
+| `--collection` | `patches_v1` | ChromaDB collection to read from |
+| `--n_samples` | `2000` | Points to plot (stratified by group) |
+| `--color_by` | `group` | `group` (scribal cluster A–G+) or `codex` |
+| `--perplexity` | `30` | t-SNE perplexity — try 15–50 |
+| `--no_show` | off | Skip interactive window, just save the PNG |
+
+---
+
 ## MLflow — Experiment Tracking
 
 All training runs are logged to `data/mlruns/`. Launch the UI from the repo root:
@@ -401,6 +434,7 @@ services/ML/
 │   │   ├── Training.py                Training script with MLflow + per-epoch eval
 │   │   ├── Embedd.py                  Batch embedding script
 │   │   ├── Evaluate.py                P@K / mAP evaluation (full + quick modes)
+│   │   ├── Visualize_TSNE.py          t-SNE scatter plot of patch embeddings
 │   │   ├── segmentation/              Segmentation service (U-Net++ model + utilities)
 │   │   │   ├── segmentation_service.py    SegmentationService class — predict_mask()
 │   │   │   ├── segmentation_utils/        Config, model definitions, prediction pipeline

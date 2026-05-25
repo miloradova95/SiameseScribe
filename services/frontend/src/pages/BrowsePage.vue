@@ -43,6 +43,7 @@
             :images="paginatedImages"
             :selected-image-id="selectedImage?.id"
             :loading="initialLoading"
+            :annotated-image-ids="annotatedImageIds"
             @select="selectImage"
           />    
         </div>
@@ -125,7 +126,7 @@ import BrowseInspector from '@/features/browse/BrowseInspector.vue'
 import RandomImageButton from '@/components/RandomImageButton.vue'
 import { apiUrl } from '@/lib/api'
 import { fetchImages } from '@/services/image-service'
-import { fetchPatchesByImageId } from '@/services/patch-service'
+import { fetchMyFeedback, fetchPatchesByImageId } from '@/services/patch-service'
 import Pagination from '@/features/browse/components/Pagination.vue'
 
 const images = ref([])
@@ -135,6 +136,7 @@ const initialLoading = ref(false)
 const loading = ref(false)
 const patchLoading = ref(false)
 const error = ref(null)
+const annotatedImageIds = ref([])
 
 const currentPage = ref(1)
 const pageSize = ref(24)
@@ -199,6 +201,23 @@ async function loadPatchesForImage(imageId) {
     if (requestId === currentPatchRequestId) {
       patchLoading.value = false
     }
+  }
+}
+
+async function loadAnnotatedImages() {
+  try {
+    const feedbackItems = await fetchMyFeedback()
+    const ids = new Set()
+
+    for (const item of Array.isArray(feedbackItems) ? feedbackItems : []) {
+      if (item?.query_patch_source_image_id != null) {
+        ids.add(String(item.query_patch_source_image_id))
+      }
+    }
+
+    annotatedImageIds.value = [...ids]
+  } catch (err) {
+    console.error('Error loading annotated images:', err)
   }
 }
 
@@ -270,6 +289,7 @@ function handleKeydown(event) {
 
 onMounted(() => {
   loadAllImages()
+  loadAnnotatedImages()
   window.addEventListener('keydown', handleKeydown)
 })
 

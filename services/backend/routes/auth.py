@@ -21,7 +21,7 @@ def login(request: LoginRequest, session: Session = Depends(get_session)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
         )
-    if not user.is_active:
+    if not user.is_active or user.toBeDeleted:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive")
     token = create_access_token({"sub": str(user.id)})
     return TokenResponse(access_token=token)

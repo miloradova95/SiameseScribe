@@ -12,6 +12,8 @@
         <BookmarkButton :item="image" />
       </div>
 
+      <AnnotatedBadge v-if="annotated" position="top-left" />
+
       <img
         :src="fileUrl"
         :alt="image.fileName"
@@ -33,11 +35,13 @@
 <script setup>
 import { computed } from 'vue'
 import { getImageFileUrl } from '@/services/image-service'
+import AnnotatedBadge from '@/features/annotate/AnnotatedBadge.vue'
 import BookmarkButton from '@/components/BookmarkButton.vue'
 
 const props = defineProps({
   image: Object,
   selected: Boolean,
+  annotated: Boolean,
 })
 
 defineEmits(['click'])

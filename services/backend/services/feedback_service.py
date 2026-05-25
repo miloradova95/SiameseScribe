@@ -34,6 +34,7 @@ def create_feedback(session: Session, payload: FeedbackCreate, user: User) -> Fe
             Feedback.user_id == user.id,
             Feedback.query_patch_id == payload.query_patch_id,
             Feedback.result_patch_id == payload.result_patch_id,
+            Feedback.toBeDeleted == 0,
         )
     ).first()
 
@@ -66,6 +67,7 @@ def get_feedback_for_user_pair(
             Feedback.user_id == user.id,
             Feedback.query_patch_id == query_patch_id,
             Feedback.result_patch_id == result_patch_id,
+            Feedback.toBeDeleted == 0,
         )
     ).first()
 
@@ -79,6 +81,7 @@ def list_feedback_for_user(session: Session, user: User) -> list[FeedbackListIte
     feedback_items = session.exec(
         select(Feedback)
         .where(Feedback.user_id == user.id)
+        .where(Feedback.toBeDeleted == 0)
         .order_by(Feedback.created_at.desc())
     ).all()
 
@@ -93,8 +96,12 @@ def list_feedback_for_user(session: Session, user: User) -> list[FeedbackListIte
 def list_feedback_for_admin(
     session: Session,
     filters: AdminFeedbackFilterParams,
+    include_deleted: bool = False,
 ) -> list[AdminFeedbackListItem]:
     statement = select(Feedback, User).join(User, User.id == Feedback.user_id)
+
+    if not include_deleted:
+        statement = statement.where(Feedback.toBeDeleted == 0)
 
     if filters.user_id is not None:
         statement = statement.where(Feedback.user_id == filters.user_id)
@@ -120,6 +127,24 @@ def list_feedback_for_admin(
         )
         for feedback, user in rows
     ]
+
+
+def list_feedback_for_user_id(session: Session, user_id: int) -> list[AdminFeedbackListItem]:
+    filters = AdminFeedbackFilterParams(user_id=user_id)
+    return list_feedback_for_admin(session, filters, include_deleted=True)
+
+
+def soft_delete_by_user_id(session: Session, user_id: int) -> list[Feedback]:
+    feedback_items = session.exec(select(Feedback).where(Feedback.user_id == user_id)).all()
+    for feedback in feedback_items:
+        feedback.toBeDeleted = 1
+        session.add(feedback)
+    session.commit()
+
+    for feedback in feedback_items:
+        session.refresh(feedback)
+
+    return feedback_items
 
 
 # start_retrain_job / run_retrain_job were removed here.
@@ -151,11 +176,18 @@ def _to_feedback_list_item(
         id=feedback.id,
         query_patch_id=feedback.query_patch_id,
         result_patch_id=feedback.result_patch_id,
+        query_patch_source_image_id=_source_image_id_from_patch(
+            patches_by_id.get(feedback.query_patch_id)
+        ),
+        result_patch_source_image_id=_source_image_id_from_patch(
+            patches_by_id.get(feedback.result_patch_id)
+        ),
         query_patch_file_name=_file_name_from_patch(patches_by_id.get(feedback.query_patch_id)),
         result_patch_file_name=_file_name_from_patch(patches_by_id.get(feedback.result_patch_id)),
         label=_decode_label(feedback.label),
         created_at=feedback.created_at,
         used_for_retrain=feedback.used_for_retrain,
+        toBeDeleted=feedback.toBeDeleted,
     )
 
 
@@ -189,6 +221,10 @@ def _file_name_from_patch(patch: Patch | None) -> str:
     if not patch:
         return "Unknown patch"
     return Path(patch.file_path).name
+
+
+def _source_image_id_from_patch(patch: Patch | None) -> int | None:
+    return patch.source_image_id if patch else None
 
 
 def _patch_path_or_404(patches_by_id: dict[int, Patch], patch_id: int, patch_role: str) -> str:

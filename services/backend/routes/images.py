@@ -6,7 +6,8 @@ from services.backend.services import image_service
 from services.backend.sqlDB.images import Image
 from services.backend.sqlDB.patches import Patch
 from services.backend.services import patch_service
-from .deps import get_session, get_current_user
+from .deps import get_session, get_current_user, require_admin
+from services.backend.schemas.images import AdminImageListItem
 from services.backend.sqlDB.users import User
 from typing import Optional
 
@@ -21,6 +22,11 @@ def get_all_images(session: Session = Depends(get_session), _: User = Depends(ge
 @router.get("/mine", response_model=list[Image])
 def get_my_images(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     return image_service.get_by_user_id(session, current_user.id)
+
+
+@router.get("/admin/uploads", response_model=list[AdminImageListItem])
+def get_admin_uploads(session: Session = Depends(get_session), _: User = Depends(require_admin)):
+    return image_service.get_admin_uploads(session)
 
 
 @router.post("/upload", response_model=Image)
@@ -57,6 +63,14 @@ def get_random_image(session: Session = Depends(get_session), _: User = Depends(
 @router.get("/{image_id}", response_model=Image)
 def get_image_by_id(image_id: int, session: Session = Depends(get_session), _: User = Depends(get_current_user)):
     image = image_service.get_by_id(session, image_id)
+    if not image:
+        raise HTTPException(404, "Image not found")
+    return image
+
+
+@router.patch("/{image_id}/soft-delete", response_model=Image)
+def soft_delete_image(image_id: int, session: Session = Depends(get_session), _: User = Depends(require_admin)):
+    image = image_service.soft_delete(session, image_id)
     if not image:
         raise HTTPException(404, "Image not found")
     return image

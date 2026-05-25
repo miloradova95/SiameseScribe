@@ -26,11 +26,14 @@ class FeedbackListItem(BaseModel):
     id: int
     query_patch_id: int
     result_patch_id: int
+    query_patch_source_image_id: int | None = None
+    result_patch_source_image_id: int | None = None
     query_patch_file_name: str
     result_patch_file_name: str
     label: FeedbackLabel
     created_at: datetime
     used_for_retrain: bool
+    toBeDeleted: int = 0
 
     @field_validator("created_at", mode="before")
     @classmethod

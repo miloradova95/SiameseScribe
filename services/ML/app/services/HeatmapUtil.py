@@ -4,6 +4,9 @@ import numpy as np
 import torch
 from PIL import Image
 
+# Increases the sharpen focus (So narrows the region where the heatmap outputs orang/red)
+HEATMAP_GAMMA = 2.0 
+
 
 def _jet(h: np.ndarray) -> np.ndarray:
     """Map a [0,1] float32 array to uint8 RGB using the jet colormap."""
@@ -26,6 +29,7 @@ def save_heatmap_overlay(
 
     h = h.astype(np.float32)
     h = (h - h.min()) / (h.max() - h.min() + 1e-8)
+    h = h ** HEATMAP_GAMMA
 
     colored = _jet(h)
 

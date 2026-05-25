@@ -28,6 +28,7 @@ from services.backend.routes.finetune import router as finetune_router
 from services.backend.routes.auth import router as auth_router
 from services.backend.routes.users import router as users_router
 from services.backend.routes.heatmaps import router as heatmaps_router
+from services.backend.routes.dataset_sync import router as dataset_sync_router
 from services.backend.routes.deps import get_current_user
 from services.backend.sqlDB.images import Image
 from services.backend.sqlDB.patches import Patch
@@ -47,6 +48,7 @@ async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
     _migrate_images_user_id()
     _migrate_user_bookmarks()
+    _migrate_soft_delete_columns()
     _migrate_finetune_runs()
     with Session(engine) as session:
         finetune_job.recover_interrupted_runs(session)
@@ -139,6 +141,20 @@ def _migrate_user_bookmarks():
         connection.execute(text('UPDATE users SET "bookmarks" = \'[]\' WHERE "bookmarks" IS NULL'))
 
 
+def _migrate_soft_delete_columns():
+    tables = ("users", "images", "feedback")
+    with engine.begin() as connection:
+        for table in tables:
+            columns = connection.execute(text(f"PRAGMA table_info({table})")).fetchall()
+            column_names = {column[1] for column in columns}
+
+            if "toBeDeleted" not in column_names:
+                connection.execute(text(f'ALTER TABLE {table} ADD COLUMN "toBeDeleted" INTEGER DEFAULT 0 NOT NULL'))
+
+            connection.execute(text(f'UPDATE {table} SET "toBeDeleted" = 0 WHERE "toBeDeleted" IS NULL'))
+            connection.execute(text(f'CREATE INDEX IF NOT EXISTS "ix_{table}_toBeDeleted" ON {table} ("toBeDeleted")'))
+
+
 def _seed_patches():
     with Session(engine) as session:
         already_seeded = session.exec(select(Patch)).first()
@@ -215,6 +231,7 @@ app.include_router(patches_router)
 app.include_router(feedback_router)
 app.include_router(finetune_router)
 app.include_router(heatmaps_router)
+app.include_router(dataset_sync_router)
 
 
 # ─────────────────────────────────────────────

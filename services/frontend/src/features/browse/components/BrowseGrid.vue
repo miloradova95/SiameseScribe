@@ -23,6 +23,7 @@
         :key="img.id"
         :image="img"
         :selected="selectedImageId === img.id"
+        :annotated="annotatedImageIds.includes(String(img.id))"
         @click="handleSelect(img)"
       />
     </div>
@@ -42,6 +43,10 @@ defineProps({
     default: null,
   },
   loading: Boolean,
+  annotatedImageIds: {
+    type: Array,
+    default: () => [],
+  },
 })
 
 const emit = defineEmits(['select'])

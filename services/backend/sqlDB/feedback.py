@@ -11,4 +11,5 @@ class Feedback(SQLModel, table=True):
     result_patch_id: int = Field(..., foreign_key="patches.id", index=True)
     label: int = Field(..., description="1 = similar | 0 = not_similar")
     used_for_retrain: bool = Field(default=False)
+    toBeDeleted: int = Field(default=0, index=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
