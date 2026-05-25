@@ -28,6 +28,7 @@ from services.backend.routes.finetune import router as finetune_router
 from services.backend.routes.auth import router as auth_router
 from services.backend.routes.users import router as users_router
 from services.backend.routes.heatmaps import router as heatmaps_router
+from services.backend.routes.dataset_sync import router as dataset_sync_router
 from services.backend.routes.deps import get_current_user
 from services.backend.sqlDB.images import Image
 from services.backend.sqlDB.patches import Patch
@@ -230,6 +231,7 @@ app.include_router(patches_router)
 app.include_router(feedback_router)
 app.include_router(finetune_router)
 app.include_router(heatmaps_router)
+app.include_router(dataset_sync_router)
 
 
 # ─────────────────────────────────────────────
