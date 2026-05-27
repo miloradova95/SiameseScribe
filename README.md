@@ -55,20 +55,6 @@ cd services/frontend
 npm install
 ```
 
-## Environment Variables
-
-The project uses a repo-root `.env` file for JWT auth and admin user seeding. Docker Compose also reads this same file. Create or update it before starting the backend or the Docker stack:
-
-```bash
-# .env
-SECRET_KEY=change-this-to-a-random-secret-before-deploying
-ADMIN_USERNAME=admin
-ADMIN_EMAIL=admin@siamesescribe.local
-ADMIN_PASSWORD=changeme123
-```
-
-> Change `SECRET_KEY` and `ADMIN_PASSWORD` before any deployment.
-
 ## Running with Docker
 
 Start everything from the project root:
