@@ -14,16 +14,14 @@
       No Images found.
     </div>
 
-    <div
-      v-else
-      class="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4"
-    >
+    <div v-else class="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
       <ImageCard
         v-for="img in images"
         :key="img.id"
         :image="img"
         :selected="selectedImageId === img.id"
         :annotated="annotatedImageIds.includes(String(img.id))"
+        :annotation-count="annotationCountsByImageId[String(img.id)] || 0"
         @click="handleSelect(img)"
       />
     </div>
@@ -31,7 +29,7 @@
 </template>
 
 <script setup>
-import ImageCard from '@/components/ImageCard.vue'
+import ImageCard from "@/components/ImageCard.vue";
 
 defineProps({
   images: {
@@ -47,11 +45,15 @@ defineProps({
     type: Array,
     default: () => [],
   },
-})
+  annotationCountsByImageId: {
+    type: Object,
+    default: () => ({}),
+  },
+});
 
-const emit = defineEmits(['select'])
+const emit = defineEmits(["select"]);
 
 function handleSelect(img) {
-  emit('select', img)
+  emit("select", img);
 }
 </script>
