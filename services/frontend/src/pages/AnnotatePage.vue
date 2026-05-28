@@ -1,21 +1,6 @@
 <template>
   <div class="min-h-screen bg-[#f7f3ef] text-[#6c4f3d]">
     <main class="mx-auto max-w-[1560px] px-8 pb-10 pt-4">
-      <section class="mt-2 border-b border-[#ddd3ca] pb-6">
-        <div class="flex items-center gap-3 text-[18px]">
-          <button
-            class="text-[#c3b7ad] transition hover:text-[#8b6b59]"
-            @click="router.push('/browse')"
-          >
-            Browse
-          </button>
-          <span class="text-[#d0c5bc]">/</span>
-          <span class="font-medium text-[#6c4f3d]">{{ displayTitle || "Annotate" }}</span>
-        </div>
-        <h1 class="mt-4 text-[28px] font-semibold text-[#6c4f3d]">
-          Most similar patches
-        </h1>
-      </section>
       <div v-if="image" class="mt-6 grid grid-cols-[210px_minmax(0,1fr)] gap-8">
         <div>
           <AnnotationSidebar
@@ -29,224 +14,185 @@
             @back="router.push('/browse')"
             @select-patch="selectPatch"
           />
-
-          <div class="mt-4 rounded-[16px] border border-[#cfc5bc] bg-[#fbf8f5] px-3 py-3">
-            <div class="mb-2 flex items-baseline justify-between gap-2">
-              <p class="text-[14px] font-semibold">Navigate Patches</p>
-              <p class="text-[14px] text-[#7f6a5c]">
-                {{
-                  patches.length ? `${selectedPatchIndex + 1} / ${patches.length}` : "-"
-                }}
-              </p>
-            </div>
-
-            <div class="mb-2 flex gap-2">
-              <button
-                class="flex-1 rounded-full border border-[#8a6755] bg-[#8a6755] px-2.5 py-1 text-[13px] font-bold text-white transition hover:bg-[#6c4f3d] hover:border-[#6c4f3d] disabled:border-[#c8baae] disabled:bg-[#c8baae]"
-                :disabled="!patches.length"
-                @click="goToPrevPatch"
-              >
-                ← Prev
-              </button>
-              <button
-                class="flex-1 rounded-full border border-[#8a6755] bg-[#8a6755] px-2.5 py-1 text-[13px] font-bold text-white transition hover:bg-[#6c4f3d] hover:border-[#6c4f3d] disabled:border-[#c8baae] disabled:bg-[#c8baae]"
-                :disabled="!patches.length"
-                @click="goToNextPatch"
-              >
-                Next →
-              </button>
-            </div>
-
-            <div class="flex gap-2">
-              <input
-                v-model="jumpToId"
-                type="number"
-                min="1"
-                :max="patches.length"
-                placeholder="Patch #"
-                class="w-0 flex-1 rounded-full border border-[#c8baae] bg-white px-3 py-1 text-[13px] text-[#5b4033] placeholder-[#b49f91] outline-none focus:border-[#8a6755]"
-                @keydown.enter="jumpToPatch"
-              />
-              <button
-                class="rounded-full border border-[#8a6755] bg-[#8a6755] px-3 py-1 text-[13px] font-bold text-white transition hover:bg-[#6c4f3d] hover:border-[#6c4f3d] disabled:border-[#c8baae] disabled:bg-[#c8baae]"
-                :disabled="!patches.length"
-                @click="jumpToPatch"
-              >
-                Go
-              </button>
-            </div>
-          </div>
         </div>
 
         <section class="rounded-[18px] border border-[#cfc5bc] bg-[#fbf8f5] p-8">
+          <div class="mb-6 flex items-start justify-between gap-6">
+            <div>
+              <h1 class="text-[18px] font-semibold">
+                Does the Patch Match the Selected One?
+                <span
+                  class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#6c4f3d] text-xs"
+                >
+                  i
+                </span>
+              </h1>
+
+              <p class="mt-2 max-w-[760px] text-[13px] leading-snug text-[#9a8678]">
+                Consider the shapes, curves, and style of each one. Do they feel like they
+                could be from the same hand? To complete this annotation, you will compare
+                two patches, one at a time, to your chosen patch.
+              </p>
+            </div>
+
+            <div class="flex items-center gap-3 text-[13px]">
+              <span>Heatmap</span>
+              <button
+                type="button"
+                class="relative h-6 w-11 rounded-full transition"
+                :class="heatmapOnBestMatch ? 'bg-[#7b5a49]' : 'bg-[#d6ccc3]'"
+                @click="heatmapOnBestMatch = !heatmapOnBestMatch"
+              >
+                <span
+                  class="absolute top-1 h-4 w-4 rounded-full bg-white transition"
+                  :class="heatmapOnBestMatch ? 'left-6' : 'left-1'"
+                />
+              </button>
+            </div>
+          </div>
+
+          <p class="mb-4 border-b border-[#d8cec5] pb-2 text-[13px] font-semibold">
+            Comparison {{ comparisonIndex + 1 }} of {{ comparisonsPerPatch }}
+          </p>
+
           <div class="grid grid-cols-[1fr_1fr_330px] gap-8">
             <div>
-              <p class="mb-3 text-[13px] font-semibold">Selected Patch</p>
+              <div
+                class="overflow-hidden rounded-[10px] border border-[#d8cec5] bg-[#ebe3db]"
+              >
+                <div class="bg-[#5d3d2f] px-4 py-2 text-center text-[13px] text-white">
+                  Selected Patch
+                </div>
 
-              <div class="overflow-hidden rounded-[10px] bg-[#ebe3db]">
                 <img
                   :src="selectedPatchImage"
                   alt="Selected patch"
                   class="h-[275px] w-full object-cover"
                   @error="handleImageError"
                 />
-              </div>
 
-              <p class="mt-3 text-center text-sm">
-                {{ selectedPatchLabel }}
-              </p>
+                <div class="bg-white px-3 py-3 text-center">
+                  <p class="text-[13px] font-semibold text-[#3f2d24]">
+                    {{ selectedPatchLabel }}
+                  </p>
+                  <p class="text-[12px] text-[#9a8678]">Rubricator Group: B</p>
+                </div>
+              </div>
             </div>
 
             <div>
-              <p class="mb-3 text-[13px] font-semibold">
-                {{ isManuallySelectedResult ? "Selected Result" : "Best Match" }}
-              </p>
-
-              <button
-                type="button"
-                class="relative block w-full overflow-hidden rounded-[10px] border-2 border-transparent bg-[#ebe3db] transition hover:border-[#8a6755] focus:outline-none focus:ring-2 focus:ring-[#8a6755]"
-                :disabled="!bestMatch"
-                @click="openPatch(bestMatch)"
+              <div
+                class="overflow-hidden rounded-[10px] border border-[#d8cec5] bg-[#ebe3db]"
               >
-                <AnnotatedBadge
-                  v-if="patchHasFeedbackWithSelected(bestMatch)"
-                  size="md"
-                />
-                <img
-                  :src="
-                    heatmapOnBestMatch && bestMatch?.heatmapSrc
-                      ? bestMatch.heatmapSrc
-                      : bestMatch?.imageSrc || fallbackImage
-                  "
-                  :alt="bestMatch?.label || 'Best match'"
-                  class="h-[275px] w-full object-cover"
-                  @error="handleImageError"
-                />
-              </button>
+                <div class="bg-white px-4 py-2 text-center text-[13px] text-[#6c4f3d]">
+                  Match {{ comparisonIndex + 1 }}
+                </div>
 
-              <p class="mt-3 text-center text-sm">
-                {{ bestMatch?.label || "-" }}
-              </p>
+                <button
+                  type="button"
+                  class="relative block w-full bg-[#ebe3db]"
+                  :disabled="!currentMatch"
+                  @click="openPatch(currentMatch)"
+                >
+                  <AnnotatedBadge
+                    v-if="patchHasFeedbackWithSelected(currentMatch)"
+                    size="md"
+                  />
+
+                  <img
+                    :src="
+                      heatmapOnBestMatch && currentMatch?.heatmapSrc
+                        ? currentMatch.heatmapSrc
+                        : currentMatch?.imageSrc || fallbackImage
+                    "
+                    :alt="currentMatch?.label || 'Current match'"
+                    class="h-[275px] w-full object-cover"
+                    @error="handleImageError"
+                  />
+                </button>
+
+                <div class="bg-white px-3 py-3 text-center">
+                  <p class="text-[13px] font-semibold text-[#3f2d24]">
+                    {{ currentMatch?.label || "-" }}
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <div class="pt-8">
-              <div class="mb-6">
-                <div class="flex items-center justify-between gap-2">
-                  <div class="flex items-center gap-2 text-[14px] font-semibold">
-                    <span>Similarity Score</span>
-                    <span
-                      class="flex h-5 w-5 items-center justify-center rounded-full border border-[#6c4f3d] text-xs"
-                    >
-                      i
-                    </span>
-                  </div>
-
-                  <div class="flex items-center gap-2 text-[13px]">
-                    <span>Heatmap</span>
-                    <button
-                      type="button"
-                      class="relative h-6 w-11 rounded-full transition"
-                      :class="heatmapOnBestMatch ? 'bg-[#7b5a49]' : 'bg-[#d6ccc3]'"
-                      @click="heatmapOnBestMatch = !heatmapOnBestMatch"
-                    >
-                      <span
-                        class="absolute top-1 h-4 w-4 rounded-full bg-white transition"
-                        :class="heatmapOnBestMatch ? 'left-6' : 'left-1'"
-                      />
-                    </button>
-                  </div>
-                </div>
-
-                <p class="mt-1 text-[24px]">{{ bestMatch?.score ?? "-" }}%</p>
-              </div>
-
-              <div v-if="false" class="hidden border-t border-[#d8cec5] pt-5">
-                <p class="mb-2 text-[13px] font-semibold">Navigate Patches</p>
-                <p class="mb-3 text-[12px] text-[#7f6a5c]">
-                  {{
-                    patches.length ? `${selectedPatchIndex + 1} / ${patches.length}` : "—"
-                  }}
-                </p>
-
-                <div class="mb-3 flex gap-2">
-                  <button
-                    class="flex-1 rounded-full border border-[#8a6755] bg-[#8a6755] px-3 py-1.5 text-sm font-bold text-white transition hover:bg-[#6c4f3d] hover:border-[#6c4f3d] disabled:border-[#c8baae] disabled:bg-[#c8baae]"
-                    :disabled="!patches.length"
-                    @click="goToPrevPatch"
-                  >
-                    ← Prev
-                  </button>
-                  <button
-                    class="flex-1 rounded-full border border-[#8a6755] bg-[#8a6755] px-3 py-1.5 text-sm font-bold text-white transition hover:bg-[#6c4f3d] hover:border-[#6c4f3d] disabled:border-[#c8baae] disabled:bg-[#c8baae]"
-                    :disabled="!patches.length"
-                    @click="goToNextPatch"
-                  >
-                    Next →
-                  </button>
-                </div>
-
-                <div class="flex gap-2">
-                  <input
-                    v-model="jumpToId"
-                    type="number"
-                    min="1"
-                    :max="patches.length"
-                    placeholder="Patch #"
-                    class="w-0 flex-1 rounded-full border border-[#c8baae] bg-white px-3 py-1.5 text-sm text-[#5b4033] placeholder-[#b49f91] outline-none focus:border-[#8a6755]"
-                    @keydown.enter="jumpToPatch"
-                  />
-                  <button
-                    class="rounded-full border border-[#8a6755] bg-[#8a6755] px-4 py-1.5 text-sm font-bold text-white transition hover:bg-[#6c4f3d] hover:border-[#6c4f3d] disabled:border-[#c8baae] disabled:bg-[#c8baae]"
-                    :disabled="!patches.length"
-                    @click="jumpToPatch"
-                  >
-                    Go
-                  </button>
-                </div>
-              </div>
+            <div>
+              <ModelFocusPanel
+                :disabled="!modelFocusEnabled"
+                @draw="heatmapOnBestMatch = false"
+                @erase="console.log('erase')"
+                @clear="console.log('clear drawing')"
+                @confirm="console.log('confirm drawing')"
+                @focus-correct="console.log('focus correct')"
+                @example="console.log('show example')"
+              />
             </div>
           </div>
 
-          <div class="mt-8 border-t border-[#d8cec5] pt-5">
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="mb-3 flex items-center gap-2">
-                  <p>How similar are these patches?</p>
-                  <InfoTooltip
-                    text="Similar: the model is confident these two manuscripts share the same scribe. Not Similar: the model determined they were written by different scribes. Uncertain: the similarity score is too low to make a clear decision."
-                    position="right"
-                  />
+          <div class="mt-8 border-[#d8cec5] pt-5">
+            <div class="flex flex-col items-center">
+              <div class="mb-4 flex w-full items-center gap-3">
+                <div class="h-px flex-1 bg-[#d8cec5]"></div>
+                <div
+                  class="flex h-6 w-6 items-center justify-center rounded-full bg-[#6c4f3d] text-xs font-bold text-white"
+                >
+                  1
                 </div>
+                <p class="text-[13px] font-semibold">
+                  How similar is it to the chosen patch?
+                </p>
+                <div class="h-px flex-1 bg-[#d8cec5]"></div>
+              </div>
 
-                <div class="flex gap-3">
-                  <button
-                    class="rounded-full border px-5 py-2 text-sm transition"
-                    :class="feedbackButtonClass('similar')"
-                    :disabled="feedbackSaving || !canSubmitFeedback"
-                    @click="submitFeedback('similar')"
+              <div class="flex gap-3">
+                <button
+                  class="min-w-[88px] rounded-[8px] border px-5 py-3 text-sm transition"
+                  :class="feedbackButtonClass('similar')"
+                  :disabled="feedbackSaving || !canSubmitFeedback"
+                  @click="submitFeedback('similar')"
+                >
+                  <div
+                    class="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#dfead4] text-[#567b3e]"
                   >
-                    Similar
-                  </button>
-                  <button
-                    class="rounded-full border px-5 py-2 text-sm transition"
-                    :class="feedbackButtonClass('not_similar')"
-                    :disabled="feedbackSaving || !canSubmitFeedback"
-                    @click="submitFeedback('not_similar')"
+                    ✓
+                  </div>
+                  Similar
+                </button>
+
+                <button
+                  class="min-w-[88px] rounded-[8px] border px-5 py-3 text-sm transition"
+                  :class="feedbackButtonClass('not_similar')"
+                  :disabled="feedbackSaving || !canSubmitFeedback"
+                  @click="submitFeedback('not_similar')"
+                >
+                  <div
+                    class="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#f6ded8] text-[#c13b2d]"
                   >
-                    Not Similar
-                  </button>
-                  <button
-                    class="rounded-full border border-[#8a6755] px-5 py-2 text-sm"
-                    :disabled="feedbackSaving"
-                    @click="clearFeedbackState"
+                    ×
+                  </div>
+                  Not Similar
+                </button>
+
+                <button
+                  class="min-w-[88px] rounded-[8px] border px-5 py-3 text-sm transition"
+                  :class="feedbackButtonClass('uncertain')"
+                  :disabled="feedbackSaving || !canSubmitFeedback"
+                  @click="submitFeedback('uncertain')"
+                >
+                  <div
+                    class="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#f2e6cc] text-[#9a7234]"
                   >
-                    Uncertain
-                  </button>
-                </div>
+                    ?
+                  </div>
+                  Uncertain
+                </button>
               </div>
 
               <p
-                class="text-sm"
+                class="mt-4 text-sm"
                 :class="feedbackError ? 'text-red-700' : 'text-[#7f6a5c]'"
               >
                 {{ feedbackStatusText }}
@@ -254,79 +200,18 @@
             </div>
           </div>
 
-          <div class="mt-8 border-t border-[#d8cec5] pt-5">
-            <div class="mb-5 flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <h2 class="text-[16px]">Other similar patches</h2>
-                <InfoTooltip
-                  text="Name of the peua flourish"
-                  position="right"
-                />
-              </div>
-
-              <div class="flex items-center gap-3 text-[13px]">
-                <span>Heatmap</span>
-                <button
-                  type="button"
-                  class="relative h-6 w-11 rounded-full transition"
-                  :class="heatmapOn ? 'bg-[#7b5a49]' : 'bg-[#d6ccc3]'"
-                  @click="heatmapOn = !heatmapOn"
-                >
-                  <span
-                    class="absolute top-1 h-4 w-4 rounded-full bg-white transition"
-                    :class="heatmapOn ? 'left-6' : 'left-1'"
-                  />
-                </button>
-              </div>
-            </div>
-
-            <div v-if="similarLoading" class="py-8 text-center text-sm text-[#7f6a5c]">
-              Finding similar patches...
-            </div>
-
-            <div v-else-if="similarError" class="py-8 text-center text-sm text-red-700">
-              {{ similarError }}
-            </div>
-
-            <div v-else-if="otherSimilarPatches.length" class="grid grid-cols-4 gap-8">
-              <div
-                v-for="patch in otherSimilarPatches"
-                :key="patch.id"
-                class="text-center"
-              >
-                <button
-                  type="button"
-                  class="relative block w-full overflow-hidden rounded-[8px] border-2 border-transparent bg-[#ebe3db] transition hover:border-[#8a6755] focus:outline-none focus:ring-2 focus:ring-[#8a6755]"
-                  @click="selectBestMatch(patch)"
-                >
-                  <AnnotatedBadge v-if="patchHasFeedbackWithSelected(patch)" />
-                  <img
-                    :src="
-                      heatmapOn && patch.heatmapSrc ? patch.heatmapSrc : patch.imageSrc
-                    "
-                    :alt="patch.label"
-                    class="h-[190px] w-full object-cover"
-                    @error="handleImageError"
-                  />
-                </button>
-
-                <p class="mt-2 text-[14px] font-semibold">{{ patch.score }}%</p>
-
-                <p class="text-[13px] text-[#7f6a5c]">
-                  {{ patch.label }}
-                </p>
-              </div>
-            </div>
-
-            <div v-else class="py-8 text-center text-sm text-[#7f6a5c]">
-              No similar patches found.
-            </div>
+          <div class="mt-8 flex justify-end">
+            <button
+              class="rounded-full border border-[#8a6755] bg-[#eadfd7] px-6 py-2 text-sm text-[#6c4f3d] transition hover:bg-[#dccbbf]"
+              @click="goToNextPatch"
+            >
+              → Next Flourish
+            </button>
           </div>
         </section>
       </div>
 
       <div v-else-if="loading" class="py-20 text-center">Loading...</div>
-
       <div v-else class="py-20 text-center">Image not found.</div>
     </main>
   </div>
@@ -337,9 +222,9 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import AnnotatedBadge from "@/features/annotate/AnnotatedBadge.vue";
 import AnnotationSidebar from "@/features/annotate/AnnotationSidebar.vue";
+import ModelFocusPanel from "@/features/annotate/FocusModelPanel.vue";
 import { apiUrl } from "@/lib/api";
 import { fetchImages } from "@/services/image-service";
-import InfoTooltip from "@/components/InfoTooltip.vue";
 import {
   fetchSimilarPatches,
   fetchPatchByFileName,
@@ -358,9 +243,8 @@ const router = useRouter();
 
 const image = ref(null);
 const loading = ref(false);
-const heatmapOn = ref(false); // toggles heatmaps for "Other similar patches" grid
-const heatmapOnBestMatch = ref(false); // toggles heatmap for "Best Match" only
-const isManuallySelectedResult = ref(false); // true when user clicked a non-top result into the best match slot
+
+const heatmapOnBestMatch = ref(false);
 
 const patches = ref([]);
 const selectedPatch = ref(null);
@@ -368,6 +252,7 @@ const selectedPatch = ref(null);
 const similarPatches = ref([]);
 const similarLoading = ref(false);
 const similarError = ref(null);
+
 const feedbackSaving = ref(false);
 const feedbackError = ref(null);
 const lastFeedbackLabel = ref(null);
@@ -375,9 +260,16 @@ const feedbackSavedAt = ref(0);
 const feedbackByPair = ref({});
 const annotatedPatchIds = ref([]);
 const annotatedPatchNames = ref([]);
-const jumpToId = ref("");
+
+const comparisonIndex = ref(0);
+const comparisonsPerPatch = 2;
+const completedComparisonsForCurrentPatch = ref(0);
 
 const fileName = computed(() => route.params.fileName);
+
+const modelFocusEnabled = computed(() => {
+  return completedComparisonsForCurrentPatch.value >= comparisonsPerPatch;
+});
 
 const fallbackImage =
   "data:image/svg+xml;charset=UTF-8," +
@@ -400,27 +292,36 @@ const selectedPatchLabel = computed(() => {
   return displayTitle.value;
 });
 
-const bestMatch = computed(() => similarPatches.value[0] || null);
-const otherSimilarPatches = computed(() => similarPatches.value.slice(1));
+const currentMatch = computed(() => {
+  return similarPatches.value[comparisonIndex.value] || null;
+});
 
 const selectedPatchIndex = computed(() => {
   if (!selectedPatch.value || !patches.value.length) return -1;
   return patches.value.findIndex((p) => p.id === selectedPatch.value.id);
 });
+
 const canSubmitFeedback = computed(() =>
-  Boolean(selectedPatch.value?.id && bestMatch.value?.id)
+  Boolean(selectedPatch.value?.id && currentMatch.value?.id)
 );
+
 const feedbackStatusText = computed(() => {
   if (feedbackSaving.value) return "Saving feedback...";
   if (feedbackError.value) return feedbackError.value;
+
   if (lastFeedbackLabel.value && feedbackSavedAt.value) {
-    return lastFeedbackLabel.value === "similar"
-      ? "Saved as similar for this patch pair."
-      : "Saved as not similar for this patch pair.";
+    if (completedComparisonsForCurrentPatch.value < comparisonsPerPatch) {
+      return "Saved. Please annotate the next comparison.";
+    }
+
+    return "Both comparisons saved for this patch.";
   }
-  if (!canSubmitFeedback.value)
-    return "Select a patch with a valid best match to save feedback.";
-  return "Click Similar or Not Similar to save feedback.";
+
+  if (!canSubmitFeedback.value) {
+    return "Select a patch with a valid match to save feedback.";
+  }
+
+  return "Click Similar, Not Similar or Uncertain to save feedback.";
 });
 
 const mainImageSrc = computed(() => {
@@ -431,8 +332,8 @@ const mainImageSrc = computed(() => {
 const selectedPatchImage = computed(() => {
   if (!selectedPatch.value) return fallbackImage;
 
-  if (heatmapOnBestMatch.value && bestMatch.value?.queryHeatmapSrc) {
-    return bestMatch.value.queryHeatmapSrc;
+  if (heatmapOnBestMatch.value && currentMatch.value?.queryHeatmapSrc) {
+    return currentMatch.value.queryHeatmapSrc;
   }
 
   if (selectedPatch.value.id) {
@@ -451,29 +352,20 @@ const selectedPatchImage = computed(() => {
 
 async function selectPatch(patch) {
   selectedPatch.value = patch;
+  comparisonIndex.value = 0;
+  completedComparisonsForCurrentPatch.value = 0;
+  heatmapOnBestMatch.value = false;
   clearFeedbackState();
   await loadSimilarForPatch(patch);
 }
 
 function goToNextPatch() {
   if (!patches.value.length) return;
+
   const idx = selectedPatchIndex.value;
   const next = idx < patches.value.length - 1 ? idx + 1 : 0;
+
   selectPatch(patches.value[next]);
-}
-
-function goToPrevPatch() {
-  if (!patches.value.length) return;
-  const idx = selectedPatchIndex.value;
-  const prev = idx > 0 ? idx - 1 : patches.value.length - 1;
-  selectPatch(patches.value[prev]);
-}
-
-function jumpToPatch() {
-  const num = parseInt(jumpToId.value, 10);
-  if (isNaN(num) || num < 1 || num > patches.value.length) return;
-  selectPatch(patches.value[num - 1]);
-  jumpToId.value = "";
 }
 
 function patchRouteParam(patch) {
@@ -486,22 +378,10 @@ function openPatch(patch) {
   router.push(`/browse/${encodeURIComponent(target)}`);
 }
 
-async function selectBestMatch(patch) {
-  const selectedIndex = similarPatches.value.findIndex((item) => item.id === patch.id);
-  if (selectedIndex <= 0) return;
-
-  const updatedPatches = [...similarPatches.value];
-  updatedPatches[selectedIndex] = updatedPatches[0];
-  updatedPatches[0] = patch;
-  similarPatches.value = updatedPatches;
-  isManuallySelectedResult.value = true;
-
-  clearFeedbackState();
-  await loadExistingFeedbackForCurrentPair();
-}
-
 function getPatchPath(patch) {
-  return patch.file_path || patch.filePath || patch.patch_path || patch.patch_filename;
+  return (
+    patch?.file_path || patch?.filePath || patch?.patch_path || patch?.patch_filename
+  );
 }
 
 function normalizePatch(patch) {
@@ -547,7 +427,7 @@ function feedbackKey(queryPatchId, resultPatchId) {
 }
 
 function currentFeedbackKey() {
-  return feedbackKey(selectedPatch.value?.id, bestMatch.value?.id);
+  return feedbackKey(selectedPatch.value?.id, currentMatch.value?.id);
 }
 
 function patchHasFeedbackWithSelected(patch) {
@@ -564,15 +444,10 @@ function feedbackButtonClass(label) {
   const isActive = lastFeedbackLabel.value === label && feedbackSavedAt.value;
   const isDisabled = feedbackSaving.value || !canSubmitFeedback.value;
 
-  if (isActive) {
-    return "border-[#6c4f3d] bg-[#6c4f3d] text-white";
-  }
+  if (isActive) return "border-[#6c4f3d] bg-white text-[#5b4033]";
+  if (isDisabled) return "border-[#c8baae] text-[#b49f91]";
 
-  if (isDisabled) {
-    return "border-[#c8baae] text-[#b49f91]";
-  }
-
-  return "border-[#8a6755] text-[#5b4033] hover:bg-[#f0e7e0]";
+  return "border-[#d8cec5] bg-white text-[#5b4033] hover:border-[#8a6755]";
 }
 
 async function submitFeedback(label) {
@@ -584,13 +459,15 @@ async function submitFeedback(label) {
   try {
     await saveFeedback({
       queryPatchId: selectedPatch.value.id,
-      resultPatchId: bestMatch.value.id,
+      resultPatchId: currentMatch.value.id,
       label,
     });
+
     const key = currentFeedbackKey();
+
     const savedFeedback = {
       query_patch_id: selectedPatch.value.id,
-      result_patch_id: bestMatch.value.id,
+      result_patch_id: currentMatch.value.id,
       label,
       created_at: new Date().toISOString(),
     };
@@ -600,6 +477,17 @@ async function submitFeedback(label) {
         ...feedbackByPair.value,
         [key]: savedFeedback,
       };
+    }
+
+    applyFeedbackState(savedFeedback);
+    completedComparisonsForCurrentPatch.value += 1;
+
+    if (completedComparisonsForCurrentPatch.value < comparisonsPerPatch) {
+      comparisonIndex.value += 1;
+      clearFeedbackState();
+      await loadExistingFeedbackForCurrentPair();
+      showFeedbackToast("Feedback saved. Next comparison loaded.");
+      return;
     }
 
     const selectedId = selectedPatch.value?.id;
@@ -617,10 +505,7 @@ async function submitFeedback(label) {
       annotatedPatchNames.value = [...annotatedPatchNames.value, selectedName];
     }
 
-    applyFeedbackState(savedFeedback);
-    showFeedbackToast(
-      label === "similar" ? "Marked as similar." : "Marked as not similar."
-    );
+    showFeedbackToast("Both comparisons saved.");
   } catch (error) {
     feedbackError.value = error.message || "Failed to save feedback.";
     showFeedbackToast(feedbackError.value, "error");
@@ -648,6 +533,7 @@ async function loadAnnotatedPatches() {
       ...feedbackByPair.value,
       ...feedbackPairs,
     };
+
     annotatedPatchIds.value = [...ids];
     annotatedPatchNames.value = [...names];
   } catch (error) {
@@ -671,13 +557,14 @@ async function loadExistingFeedbackForCurrentPair() {
   try {
     const feedback = await fetchMyFeedbackForPair({
       queryPatchId: selectedPatch.value.id,
-      resultPatchId: bestMatch.value.id,
+      resultPatchId: currentMatch.value.id,
     });
 
     feedbackByPair.value = {
       ...feedbackByPair.value,
       [key]: feedback,
     };
+
     feedbackError.value = null;
     applyFeedbackState(feedback);
   } catch (error) {
@@ -686,6 +573,9 @@ async function loadExistingFeedbackForCurrentPair() {
 }
 
 async function loadSimilarForPatch(patch) {
+  comparisonIndex.value = 0;
+  completedComparisonsForCurrentPatch.value = 0;
+
   const path = getPatchPath(patch);
 
   if (!path) {
@@ -697,18 +587,20 @@ async function loadSimilarForPatch(patch) {
   similarLoading.value = true;
   similarError.value = null;
   similarPatches.value = [];
-  isManuallySelectedResult.value = false;
+  heatmapOnBestMatch.value = false;
 
   try {
     const results = await fetchSimilarPatches(path, {
-      topK: 5,
+      topK: Math.max(5, comparisonsPerPatch),
       sourceImageId: patch.source_image_id,
     });
+
     const resolvedPatches = (
       await Promise.all(
         results.map(async (item) => {
           try {
             const patchRecord = await fetchPatchByFileName(item.patch_filename);
+
             return {
               id: patchRecord.id,
               label: item.patch_filename,
@@ -716,6 +608,7 @@ async function loadSimilarForPatch(patch) {
               imageSrc: getPatchFileUrlByName(item.patch_filename),
               filePath: patchRecord.file_path,
               heatmapSrc: null,
+              queryHeatmapSrc: null,
             };
           } catch {
             return null;
@@ -725,6 +618,7 @@ async function loadSimilarForPatch(patch) {
     ).filter(Boolean);
 
     similarPatches.value = resolvedPatches;
+
     await loadExistingFeedbackForCurrentPair();
     loadHeatmapsInBackground(path, resolvedPatches);
   } catch (error) {
@@ -734,23 +628,30 @@ async function loadSimilarForPatch(patch) {
   }
 }
 
-function loadHeatmapsInBackground(queryPath, patches) {
-  patches.forEach(async (patch) => {
+function loadHeatmapsInBackground(queryPath, patchesToLoad) {
+  patchesToLoad.forEach(async (patch) => {
     if (!patch.filePath) return;
+
     try {
       const data = await fetchExplainPair(queryPath, patch.filePath);
       const heatmapSrc = getHeatmapFileUrl(data.heatmaps.result);
       const queryHeatmapSrc = getHeatmapFileUrl(data.heatmaps.query);
+
       const idx = similarPatches.value.findIndex((p) => p.id === patch.id);
+
       if (idx !== -1) {
         similarPatches.value = [
           ...similarPatches.value.slice(0, idx),
-          { ...similarPatches.value[idx], heatmapSrc, queryHeatmapSrc },
+          {
+            ...similarPatches.value[idx],
+            heatmapSrc,
+            queryHeatmapSrc,
+          },
           ...similarPatches.value.slice(idx + 1),
         ];
       }
     } catch {
-      // heatmap generation is non-critical — silently skip
+      // heatmap generation is non-critical
     }
   });
 }
@@ -762,6 +663,8 @@ async function loadImageFromRoute() {
   selectedPatch.value = null;
   similarPatches.value = [];
   similarError.value = null;
+  comparisonIndex.value = 0;
+  completedComparisonsForCurrentPatch.value = 0;
   clearFeedbackState();
 
   try {
