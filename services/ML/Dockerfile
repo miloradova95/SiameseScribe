@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY services/ML/requirements.txt services/ML/requirements.txt
-RUN pip install --no-cache-dir -r services/ML/requirements.txt
+RUN pip install --retries 5 --timeout=120 --no-cache-dir -r services/ML/requirements.txt
 
 COPY shared/ shared/
 COPY services/ML/ services/ML/

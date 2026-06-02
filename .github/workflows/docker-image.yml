@@ -1,0 +1,53 @@
+# .github/workflows/ci.yml
+name: CI – Build & Health Check
+
+on:
+  pull_request:
+    branches: [development, main]
+  push:
+    branches: [development, main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create required data directory
+        run: mkdir -p data
+
+      - name: Create .env file
+        run: |
+          echo "SECRET_KEY=ci-test-key" >> .env
+          echo "ADMIN_USERNAME=admin" >> .env
+          echo "ADMIN_EMAIL=admin@test.local" >> .env
+          echo "ADMIN_PASSWORD=testpassword" >> .env
+
+      - name: Build all services
+        run: docker compose build
+
+      - name: Start all services
+        run: docker compose up -d
+
+      - name: Wait for backend
+        run: |
+          for i in {1..5}; do
+            curl -sf http://localhost:8000/docs && break
+            echo "Waiting for backend... ($i)"
+            sleep 5
+          done
+
+      - name: Wait for ML service
+        run: |
+          for i in {1..5}; do
+            curl -sf http://localhost:8001/docs && break
+            echo "Waiting for ML... ($i)"
+            sleep 5
+          done
+
+      - name: Show container status
+        if: always()
+        run: docker compose ps
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
